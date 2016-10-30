@@ -1,0 +1,16 @@
+{
+  "name": "flexbot",
+  "version": "8.0.0",
+  "description": "Discord bot",
+  "main": "bot.js",
+  "scripts": {
+    "test": "node bot.js"
+  },
+  "author": "Flex",
+  "license": "N/A",
+  "dependencies": {
+    "eris": "^0.4.0",
+    "mathjs": "^3.6.0",
+    "node-emoji": "^1.4.1"
+  }
+}
