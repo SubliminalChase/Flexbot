@@ -11,6 +11,11 @@
   "dependencies": {
     "eris": "^0.4.0",
     "mathjs": "^3.6.0",
-    "node-emoji": "^1.4.1"
+    "mysql-wrap": "^0.5.3",
+    "node-emoji": "^1.4.1",
+    "node-mysql": "^0.4.2",
+    "request": "^2.76.0",
+    "require-reload": "^0.2.2",
+    "svg2png": "^4.0.0"
   }
 }

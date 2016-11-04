@@ -1,10 +1,21 @@
 var Eris = require("eris");
 var config = require("./config.json");
-var bot = new Eris(config.token);
+global.flexbot = {};
+const flexbot = global.flexbot
+flexbot.bot = new Eris(config.token);
+flexbot.prefix = "flexbot.";
+flexbot.oid = config.ownerid;
 
-var prefix = "flexbot.";
+var util = require("util");
+var fs = require("fs");
+var path = require("path");
 var emoji = require("node-emoji");
+var mysql = require("mysql");
+var reload = require("require-reload")(require);
+flexbot.sql =  mysql.createConnection(config.mysql);
+flexbot.sql.connect();
 
+var bot = flexbot.bot
 bot.on("ready", () => {
 	console.log("Loaded FlexBot");
 	bot.getDMChannel(config.ownerid)
@@ -17,17 +28,19 @@ function isOwner(msg){
 	return msg.author.id == config.ownerid
 }
 
-var cmds = [
-	{
+flexbot.isOwner = isOwner;
+
+var cmds = {
+	help:{
 		name:"help",
 		desc:"Lists commands",
 		func: function(msg,args){
 			bot.createMessage(msg.channel.id,emoji.get(":envelope_with_arrow:")+" Sending via DM.")
 			
-			var res = "**UNDERGOING REWRITE SO EXPECT COMMANDS SOON™**\n\n__**Avaliable Commands**__"
+			var res = "__**Avaliable Commands**__"
 			
-			for(i=0;i<cmds.length;i++){
-				var c = cmds[i]
+			for(item in cmds){
+				var c = cmds[item]
 				res += "\n\t\u2022 **"+c.name+"** - "+c.desc
 			}
 			
@@ -36,7 +49,7 @@ var cmds = [
 			})
 		}
 	},
-	{
+	ping:{
 		name:"ping",
 		desc:"Pong.",
 		func: function(msg,args){
@@ -45,7 +58,7 @@ var cmds = [
 			})
 		}
 	},
-	{
+	restart:{
 		name:"restart",
 		desc:"Restarts the bot, duh",
 		func: function(msg,args){
@@ -57,7 +70,7 @@ var cmds = [
 			}
 		}
 	},
-	{
+	eval:{
 		name:"eval",
 		desc:"Do I need to say?",
 		func: function(msg,args){
@@ -71,19 +84,81 @@ var cmds = [
 				bot.createMessage(msg.channel.id,emoji.get(":no_entry_sign:")+" No permission.")
 			}
 		}
+	},
+	unload:{
+		name:"unload",
+		desc:"Unloads commands",
+		func: function(msg,args){
+			if(isOwner(msg)){
+				delete cmds[args]
+					bot.createMessage(msg.channel.id,emoji.get(":ok_hand:"))
+			}else{
+				bot.createMessage(msg.channel.id,emoji.get(":no_entry_sign:")+" No permission.")
+			}
+		}
+	},
+	load:{
+		name:"load",
+		desc:"Loads a command/module file.",
+		func: function(msg,args){
+			if(isOwner(msg)){
+				if(fs.existsSync(path.join(__dirname,"modules",args))){
+					reload(path.join(__dirname,"modules",args))
+						bot.createMessage(msg.channel.id,emoji.get(":ok_hand:"))
+				}else if(fs.existsSync(path.join(__dirname,"modules",args+".js"))){
+					reload(path.join(__dirname,"modules",args+".js"))
+						bot.createMessage(msg.channel.id,emoji.get(":ok_hand:"))
+				}else{
+					bot.createMessage(msg.channel.id,"Not found.")
+				}
+			}else{
+				bot.createMessage(msg.channel.id,emoji.get(":no_entry_sign:")+" No permission.")
+			}
+		}
 	}
-];
+};
+flexbot.cmds = cmds;
 
+function addCommand(name,desc,func){
+	flexbot.cmds[name] = {name:name,desc:desc,func:func}
+}
+flexbot.addCommand = addCommand;
+
+flexbot.hooks = {};
+function addHook(name,func){
+	flexbot.hooks[name] = func
+}
+flexbot.addHook = addHook;
+
+var files = fs.readdirSync(path.join(__dirname,"modules"))
+for(f of files){
+	require(path.join(__dirname,"modules",f))
+	console.log("Loaded Module: "+f)
+};
+
+var prefix = flexbot.prefix;
 bot.on("messageCreate",(msg) => {
 	if(!msg.author.bot){
 		var c = msg.content.split(" ")
 		var args = c.splice(1,c.length).join(" ")
 		var cmd = c[0]
 		
-		for(i=0;i<cmds.length;i++){
-			if(cmd == prefix+cmds[i].name){
-				cmds[i].func(msg,args)
+		for(item in cmds){
+			if(cmd == prefix+cmds[item].name){
+				try{
+					cmds[item].func(msg,args)
+				}catch(e){
+					bot.getDMChannel(config.ownerid)
+						.then((c)=>{
+								bot.createMessage(c.id,emoji.get(":warning:")+" Error in command: "+cmd+"\n```\n"+e+"\n```")
+						})
+				}
 			}
+		}
+		
+		if(isOwner(msg) && msg.content == prefix+"incaseofemergency"){	
+			bot.createMessage(msg.channel.id,emoji.get(":ok_hand:"))
+			setTimeout(process.exit,1000)
 		}
 	}
 });
