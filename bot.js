@@ -38,8 +38,10 @@ var cmds = {
 			bot.createMessage(msg.channel.id,emoji.get(":envelope_with_arrow:")+" Sending via DM.")
 			
 			var res = "__**Avaliable Commands**__"
+			var sorted = {}
+			Object.keys(cmds).sort().forEach(k => { sorted[k] = cmds[k] })
 			
-			for(item in cmds){
+			for(item in sorted){
 				var c = cmds[item]
 				res += "\n\t\u2022 **"+c.name+"** - "+c.desc
 			}
@@ -129,6 +131,54 @@ function addHook(name,func){
 	flexbot.hooks[name] = func
 }
 flexbot.addHook = addHook;
+
+flexbot.awaitMsgs = {};
+
+flexbot.awaitForMessage = function(msg,display,callback,timeout) {
+	let dispMsg = msg.channel.createMessage(display);
+	timeout = timeout ? timeout : 30000;
+	if (!flexbot.awaitMsgs.hasOwnProperty(msg.channel.id)){
+		flexbot.awaitMsgs[msg.channel.id] = {}
+	}
+	if (flexbot.awaitMsgs[msg.channel.id][msg.author.id]) {
+		clearTimeout(flexbot.awaitMsgs[msg.channel.id][msg.author.id].timer);
+	}
+	flexbot.awaitMsgs[msg.channel.id][msg.author.id] = {
+		time:msg.timestamp,
+		botmsg:dispMsg
+	}
+	
+	let func;
+	
+	function regEvent() {
+		return new Promise((resolve,reject)=>{
+			func = function(msg2){
+				if (msg2.author.id == msg.author.id){
+				let response;
+				if(callback){
+					response = callback(msg2);
+				}else
+					response = true;
+				if(response){
+					bot.removeListener("messageCreate",func);
+					clearTimeout(flexbot.awaitMsgs[msg.channel.id][msg.author.id].timer);
+					resolve(msg2);
+				}
+				}
+			}
+			bot.on("messageCreate",func);
+			
+			flexbot.awaitMsgs[msg.channel.id][msg.author.id].timer = setTimeout(()=>{
+				bot.removeListener("messageCreate",func)
+				msg.channel.createMessage("Query canceled.");
+				reject("Request timed out.");
+			},timeout);
+		});
+	}
+	
+	return regEvent();
+}
+
 
 var files = fs.readdirSync(path.join(__dirname,"modules"))
 for(f of files){

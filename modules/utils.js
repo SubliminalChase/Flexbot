@@ -54,7 +54,7 @@ flexbot.addCommand("mods","Moderator list",function(msg,args){
 		var res = "Online moderators for **"+msg.guild.name+"**:"
 
 		msg.guild.members.forEach((u)=>{
-			if(msg.channel.permissionsOf(u.id).has("kickMembers") && !u.bot && u.status == "online"){
+			if(msg.channel.permissionsOf(u.id).has("kickMembers") && !u.bot && u.status != "offline"){
 				res+="\n"+statusIcons[u.status]+ u.username+"#"+u.discriminator
 			}
 		})
