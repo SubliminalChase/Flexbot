@@ -110,19 +110,89 @@ flexbot.addCommand("emoji","Get an image of an emoji/custom emote.",function(msg
 	}else if(args){
 		if(emoji.which(args)){
 		var s2p = require("svg2png")
-		var ehex = ((args.charCodeAt(0)+args.charCodeAt(1))+16323).toString(16)
-		var baseurl = "https://raw.githubusercontent.com/twitter/twemoji/gh-pages/svg/"
+		var twemoji = require("twemoji")
+		let a = args.split(",")
+		let size = a[1] ? parseInt(a[1]) : 1024;
+		let ehex = twemoji.convert.toCodePoint(a[0])
+		let baseurl = "https://raw.githubusercontent.com/twitter/twemoji/gh-pages/svg/"
 		
 		request.get(baseurl+ehex+".svg",function(e,res,body){
 			if(!e && res.statusCode == 200){
-				s2p(new Buffer(body),{width:1024,height:1024})
+				s2p(new Buffer(body),{width:size,height:size})
 				.then((b)=>{
-					msg.channel.createMessage("Emoji Hex: "+ehex+"\nEmoji code: "+emoji.which(args).replace(":","\\:"),{name:"emoji.png",file:b})
+					msg.channel.createMessage("Emoji Hex: "+ehex+"\nEmoji code: "+emoji.which(args).replace("_","\\_"),{name:"emoji.png",file:b})
 				})
 			}
 		})
 		}else{
 			msg.channel.createMessage("Emoji not found.")
 		}
+	}
+})
+
+flexbot.addCommand("transfer","Send credits to people.",function(msg,args){
+	if(!args){
+		msg.channel.createMessage("No arguments given.")
+	}else if(msg.mentions[0]){
+		let a = args.split(",")
+		let u = msg.mentions[0]
+		let amt = a[1]
+		if(!amt){
+			msg.channel.createMessage("Missing amount.")
+		}else{
+			if(u.bot){
+				msg.channel.createMessage("Bots cannot use credits.")
+			}else if(u.id == msg.author.id){
+				msg.channel.createMessage("It's useless to send money to yourself.")
+			}else{
+				let hasFunds;
+	flexbot.sql.query("SELECT credits FROM userdata WHERE userid="+msg.author.id,(e,d)=>{
+		if(!e){
+			if(!d[0]){
+				flexbot.sql.query("INSERT INTO userdata VALUES ("+msg.author.id+",0,0,0)")	
+				hasFunds = false;
+			}else{
+				hasFunds = d[0].credits >= parseInt(amt);
+			}
+		}
+	})
+		setTimeout(()=>{
+			if(hasFunds == true){
+				let pin = Math.floor(Math.random()*10)+""+Math.floor(Math.random()*10)+""+Math.floor(Math.random()*10)+""+Math.floor(Math.random()*10);
+
+				flexbot.awaitForMessage(msg,"You're about to send **"+parseInt(amt)+" credits** to **"+u.username+"#"+u.discriminator+"**.\n\nTo confirm, please type `"+pin+"` or `cancel` to cancel.")
+				.then(m=>{
+					if(m.content==pin){
+						let res = msg.channel.createMessage("Sending money...")
+						flexbot.bot.getDMChannel(u.id)
+		.then((c)=>{
+			c.createMessage("**"+msg.author.username+"#"+msg.author.discriminator+"** has transfered you **"+amt+" credits**.")
+			
+		})
+		flexbot.sql.query("SELECT credits FROM userdata WHERE userid="+u.id,(e,d)=>{
+			if(!e){
+				if(!d[0]){
+					flexbot.sql.query("INSERT INTO userdata VALUES ("+u.id+",0,0,0)")
+					flexbot.sql.query("UPDATE userdata SET credits = credits+"+parseInt(amt)+" WHERE userid="+msg.author.id)
+					flexbot.sql.query("UPDATE userdata SET credits = credits-"+parseInt(amt)+" WHERE userid="+msg.author.id)
+				}else{
+					flexbot.sql.query("UPDATE userdata SET credits = credits+"+parseInt(amt)+" WHERE userid="+u.id)
+					flexbot.sql.query("UPDATE userdata SET credits = credits-"+parseInt(amt)+" WHERE userid="+msg.author.id)
+				}
+			}
+			res.then(m=>flexbot.bot.editMessage(msg.channel.id,m.id,"Money sent!\n```diff\n+ "+u.username+"#"+u.discriminator+": +"+parseInt(amt)+" credits\n- "+msg.author.username+"#"+msg.author.discriminator+": -"+parseInt(amt)+" credits\n```"))
+		})
+					}else{
+						msg.channel.createMessage("Canceled transaction.")
+					}
+				})
+			}else{
+				msg.channel.createMessage("Insufficient funds.")
+			}
+			},2000)
+			}
+		}
+	}else{
+		msg.channel.createMessage("User not found. Make sure to use mentions.")
 	}
 })

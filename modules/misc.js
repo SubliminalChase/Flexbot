@@ -122,3 +122,36 @@ flexbot.addCommand("slots","A place to spend your credits.",function(msg,args){
 	})
 	}
 })
+
+flexbot.addCommand("love","Give FlexBot some love",function(msg,args){
+	let a = args.split(" ")
+	if(!args){
+		flexbot.sql.query("SELECT * FROM flexbot WHERE id=1",(e,d)=>{
+			if(!e){
+				msg.channel.createMessage("I've currently been loved "+d[0].love+" times and currently inherit "+d[0].credits+" credits.\n\nTo give love, use the argument `add`.\nTo gift credits, use the argument `gift amt`")
+			}
+		})
+	}else if(args=="add"){
+		flexbot.sql.query("UPDATE flexbot SET love=love+1 WHERE id=1")
+		msg.channel.createMessage("D'awww, thanks :heart:")
+	}else if(a[0]=="gift"){
+		if(a[1]){
+			flexbot.sql.query("SELECT credits FROM userdata WHERE userid="+msg.author.id,(e,d)=>{
+				if(!e){
+					if(!d[0]){
+						flexbot.sql.query("INSERT INTO userdata VALUES ("+msg.author.id+",0,0,0)")
+						msg.channel.createMessage("You don't seem to have the money to give me anything, but thanks for caring about me.")
+					}else if(d[0].credits >= parseInt(a[1])){
+						flexbot.sql.query("UPDATE userdata SET credits = credits-"+parseInt(a[1])+" WHERE userid="+msg.author.id)
+						flexbot.sql.query("UPDATE flexbot SET credits = credits+"+parseInt(a[1])+" WHERE id=1")
+						msg.channel.createMessage("Aww, thank you! *gives you a hug* :heart:")
+					}else{
+						msg.channel.createMessage("You don't seem to have enough. Try a lower value maybe?")
+					}
+				}
+			})
+		}else{
+			msg.channel.createMessage("You didn't specify an amount silly.")
+		}
+	}
+})

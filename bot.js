@@ -56,7 +56,7 @@ var cmds = {
 		desc:"Pong.",
 		func: function(msg,args){
 			bot.createMessage(msg.channel.id,"Pong.").then((m)=>{
-				bot.editMessage(msg.channel.id,m.id,"Pong, took "+Math.floor(m.timestamp-msg.timestamp)+"ms.")
+				bot.editMessage(msg.channel.id,m.id,"Pong, took "+Math.floor(m.timestamp-msg.timestamp)+"ms. ("+((m.timestamp-msg.timestamp)/1000).toString().substring(0,3)+" NotSoSuper Units™)")
 			})
 		}
 	},
@@ -127,8 +127,10 @@ function addCommand(name,desc,func){
 flexbot.addCommand = addCommand;
 
 flexbot.hooks = {};
-function addHook(name,func){
-	flexbot.hooks[name] = func
+function addHook(evt,name,func){
+	flexbot.hooks[evt] = flexbot.hooks[evt] || {};
+	flexbot.hooks[evt][name] = func
+	bot.on(evt,func)
 }
 flexbot.addHook = addHook;
 

@@ -33,7 +33,7 @@ flexbot.addCommand("pmmentions","Toggle PMing of mentions",function(msg,args){
 	}
 })
 
-flexbot.addHook("pmmentions",flexbot.bot.on("messageCreate",(msg)=>{
+flexbot.bot.on("messageCreate",(msg)=>{
 	if(!msg.author.bot && msg.mentions.length>-1){
 		for(i in msg.mentions){
 			flexbot.sql.query("SELECT pmmentions FROM userdata WHERE userid="+msg.mentions[i].id,(e,d)=>{
@@ -48,4 +48,4 @@ flexbot.addHook("pmmentions",flexbot.bot.on("messageCreate",(msg)=>{
 			})
 		}
 	}
-}))
+})
