@@ -3,7 +3,7 @@ var emoji = require("node-emoji")
 
 flexbot.addCommand("echo","Echo, echo, echo",function(msg,args){
 	msg.channel.createMessage("\u200b"+args)
-})
+},["say"])
 
 flexbot.addCommand("status","Sets bots status",function(msg,args){
 	flexbot.bot.editStatus("online",{name:args})
@@ -50,7 +50,7 @@ flexbot.addCommand("roll","Roll dice",function(msg,args){
 			flexbot.bot.editMessage(msg.channel.id,m.id,"You rolled: "+(rng+1)+"\n"+dice[rng])
 		},2500)
 	})
-})
+},["dice"])
 
 var semoji = [
 	":cherries:",
@@ -155,3 +155,7 @@ flexbot.addCommand("love","Give FlexBot some love",function(msg,args){
 		}
 	}
 })
+
+flexbot.addCommand("info","It's like a business card in a message",function(msg,args){
+	msg.channel.createMessage("**__FlexBot v8__**\nA bot written by Flex\nLibrary: Eris | Language: JS\nGithub: <https://github.com/LUModder/FlexBot>\nInvite: https://flexbox.xyz/flexbot/invite\nServer: <https://discord.gg/ZcXh4ek>")
+},["about"])

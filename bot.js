@@ -4,6 +4,7 @@ global.flexbot = {};
 const flexbot = global.flexbot
 flexbot.bot = new Eris(config.token);
 flexbot.prefix = "flexbot.";
+flexbot.prefix2 = "f!$";
 flexbot.oid = config.ownerid;
 
 var util = require("util");
@@ -22,6 +23,7 @@ bot.on("ready", () => {
 		.then((c)=>{
 			bot.createMessage(c.id,emoji.get(":white_check_mark:")+" Loaded FlexBot")
 		})
+	bot.createMessage(logid,emoji.get(":white_check_mark:")+" Loaded FlexBot")
 });
 
 function isOwner(msg){
@@ -29,6 +31,25 @@ function isOwner(msg){
 }
 
 flexbot.isOwner = isOwner;
+
+var logid = "246322719044403201"
+flexbot.logid = logid;
+
+function logCommand(cmd,msg,args){
+	//let out = "```diff\n% Command Log:\n+ Command: "+cmd+"\n+ Args: "+args.substring(0,10)+"...\n- User: "+msg.author.username+"#"+msg.author.discriminator+"\n- Channel: "+(msg.channel.name ? msg.channel.name : "DM")+"\n- Server: "+(msg.guild ? msg.guild.name : "DM")+"\n```";
+	bot.createMessage(logid,"",{},{
+				author:{
+					name:"Command Log",
+					icon_url:"https://twemoji.maxcdn.com/36x36/1f4dc.png"
+				},
+				color:0xEA5F14,
+				description:"Command: "+cmd+"\nArgs: "+args.substring(0,20)+"...\nUser: "+msg.author.username+"#"+msg.author.discriminator,
+				footer:{
+					text:msg.guild ? msg.channel.name+" on "+msg.guild.name : "Private Message",
+					icon_url:msg.guild ? "https://cdn.discordapp.com/icons/"+msg.guild.id+"/"+msg.guild.icon+".jpg" : "https://twemoji.maxcdn.com/36x36/2709.png"
+				}
+			})
+}
 
 var cmds = {
 	help:{
@@ -44,21 +65,29 @@ var cmds = {
 			for(item in sorted){
 				var c = cmds[item]
 				res += "\n\t\u2022 **"+c.name+"** - "+c.desc
+				if(c.aliases.length>0){
+					res+="\n\t\tAliases: "
+					for(n in c.aliases){
+						res+=c.aliases[n]+(n==c.aliases.length-1 ? "" : ", ")
+					}
+				}
 			}
 			
 			bot.getDMChannel(msg.author.id).then((c)=>{
 				bot.createMessage(c.id,res)
 			})
-		}
+		},
+		aliases:["cmds","commands"]
 	},
 	ping:{
 		name:"ping",
 		desc:"Pong.",
 		func: function(msg,args){
 			bot.createMessage(msg.channel.id,"Pong.").then((m)=>{
-				bot.editMessage(msg.channel.id,m.id,"Pong, took "+Math.floor(m.timestamp-msg.timestamp)+"ms. ("+((m.timestamp-msg.timestamp)/1000).toString().substring(0,3)+" NotSoSuper Units™)")
+				bot.editMessage(msg.channel.id,m.id,"Pong, took "+Math.floor(m.timestamp-msg.timestamp)+"ms.")
 			})
-		}
+		},
+		aliases:[]
 	},
 	restart:{
 		name:"restart",
@@ -66,11 +95,13 @@ var cmds = {
 		func: function(msg,args){
 			if(isOwner(msg)){
 				bot.createMessage(msg.channel.id,emoji.get(":arrows_counterclockwise:")+" Restarting FlexBot.")
+				bot.createMessage(logid,emoji.get(":arrows_counterclockwise:")+" Restarting FlexBot.")
 				setTimeout(process.exit,1000)
 			}else{
 				bot.createMessage(msg.channel.id,emoji.get(":no_entry_sign:")+" No permission.")
 			}
-		}
+		},
+		aliases:[]
 	},
 	eval:{
 		name:"eval",
@@ -85,7 +116,8 @@ var cmds = {
 			}else{
 				bot.createMessage(msg.channel.id,emoji.get(":no_entry_sign:")+" No permission.")
 			}
-		}
+		},
+		aliases:["js"]
 	},
 	unload:{
 		name:"unload",
@@ -97,7 +129,8 @@ var cmds = {
 			}else{
 				bot.createMessage(msg.channel.id,emoji.get(":no_entry_sign:")+" No permission.")
 			}
-		}
+		},
+		aliases:[]
 	},
 	load:{
 		name:"load",
@@ -116,13 +149,14 @@ var cmds = {
 			}else{
 				bot.createMessage(msg.channel.id,emoji.get(":no_entry_sign:")+" No permission.")
 			}
-		}
+		},
+		aliases:[]
 	}
 };
 flexbot.cmds = cmds;
 
-function addCommand(name,desc,func){
-	flexbot.cmds[name] = {name:name,desc:desc,func:func}
+function addCommand(name,desc,func,aliases=[]){
+	flexbot.cmds[name] = {name:name,desc:desc,func:func,aliases:aliases}
 }
 flexbot.addCommand = addCommand;
 
@@ -189,6 +223,7 @@ for(f of files){
 };
 
 var prefix = flexbot.prefix;
+var prefix2 = flexbot.prefix2;
 bot.on("messageCreate",(msg) => {
 	if(!msg.author.bot){
 		var c = msg.content.split(" ")
@@ -196,23 +231,70 @@ bot.on("messageCreate",(msg) => {
 		var cmd = c[0]
 		
 		for(item in cmds){
-			if(cmd == prefix+cmds[item].name){
-				try{
-					cmds[item].func(msg,args)
-				}catch(e){
-					bot.getDMChannel(config.ownerid)
-						.then((c)=>{
-								bot.createMessage(c.id,emoji.get(":warning:")+" Error in command: "+cmd+"\n```\n"+e+"\n```")
-						})
+			if(cmds[item].aliases.length > 0){
+				for(n in cmds[item].aliases){
+					if(cmd == prefix+cmds[item].aliases[n] || cmd == prefix2+cmds[item].aliases[n] || cmd == prefix+cmds[item].name || cmd == prefix2+cmds[item].name){
+						try{
+							logCommand(cmd,msg,args)
+							cmds[item].func(msg,args)
+						}catch(e){
+							logCommand(cmd,msg,args)
+									bot.createMessage(logid,emoji.get(":warning:")+" Error in command: "+cmd+"\n```\n"+e+"\n```")
+						}
+					}
 				}
-			}
+			}else if(cmd == prefix+cmds[item].name || cmd == prefix2+cmds[item].name){
+					try{
+						logCommand(cmd,msg,args)
+						cmds[item].func(msg,args)
+					}catch(e){
+						logCommand(cmd,msg,args)
+								bot.createMessage(logid,emoji.get(":warning:")+" Error in command: "+cmd+"\n```\n"+e+"\n```")
+					}
+				}
 		}
 		
 		if(isOwner(msg) && msg.content == prefix+"incaseofemergency"){	
 			bot.createMessage(msg.channel.id,emoji.get(":ok_hand:"))
 			setTimeout(process.exit,1000)
 		}
+		
+		if(msg.cleanContent.substring(0,8) == "@FlexBot"){
+			msg.channel.createMessage("Mentioning me is not a prefix due to possible conflicts with other commands. My prefixes are `"+prefix+"` and `"+prefix2+"`")
+		}
 	}
 });
+
+bot.on("guildCreate",s=>{
+	flexbot.sql.query("SELECT * FROM serverconfig WHERE id="+s.id,(e,d)=>{
+			if(!e){
+				if(!d[0]){
+					flexbot.sql.query("INSERT INTO serverconfig VALUES ("+s.id+")")
+		let bots = 0
+		s.members.forEach(m=>{if(m.bot) ++bots;})
+			bot.createMessage(logid,"",{},{
+				author:{
+					name:"Joined Server: "+s.name,
+					icon_url:"https://twemoji.maxcdn.com/36x36/2705.png"
+				},
+				color:0x00C000,
+				description:"**Owner**: "+s.members.get(s.ownerID).username+"#"+s.members.get(s.ownerID).discriminator+"\n**Members**: "+s.memberCount+"\n**Bots: "+bots+" ("+Math.floor((bots/s.memberCount)*100)+"%)"
+			})
+	}
+	}
+	})
+})
+
+bot.on("guildDelete",s=>{
+	flexbot.sql.query("DELETE FROM serverconfig WHERE id="+s.id)
+
+	bot.createMessage(logid,"",{},{
+		author:{
+			name:"Left Server: "+s.name,
+			icon_url:"https://twemoji.maxcdn.com/36x36/274e.png"
+		},
+		color:0xC00000
+	})
+})
 
 bot.connect();

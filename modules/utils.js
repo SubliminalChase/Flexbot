@@ -63,8 +63,8 @@ flexbot.addCommand("mods","Moderator list",function(msg,args){
 })
 
 flexbot.addCommand("purge","Purge/clean x messages from a channel",function(msg,args){
-	if(msg.channel.permissionsOf(msg.author.id).has("manageMessages")){
-	if(msg.channel.permissionsOf(flexbot.bot.user.id).has("manageMessages")){
+	if(msg.channel.permissionsOf(msg.author.id).has("administrator")||flexbot.isOwner(msg)){
+	if(msg.channel.permissionsOf(flexbot.bot.user.id).has("administrator")){
 			if(args && parseInt(args) > 0){
 				flexbot.bot.purgeChannel(msg.channel.id,parseInt(args))
 				msg.channel.createMessage("Successfully cleared "+args+" messages.")
@@ -77,12 +77,12 @@ flexbot.addCommand("purge","Purge/clean x messages from a channel",function(msg,
 					msg.channel.createMessage("Amount not specified or lower than 1.")
 			}
 		}else{
-			msg.channel.createMessage("I do not have Manage Messsges permission.")
+			msg.channel.createMessage("I do not have Administrator permission.")
 		}
 	}else{
-		msg.channel.createMessage(emoji.get(":no_entry_sign:")+" Lacking permissions, need Manage Messages.")
+		msg.channel.createMessage(emoji.get(":no_entry_sign:")+" Lacking permissions, need Administrator.")
 	}
-})
+},["prune"])
 
 flexbot.addCommand("uptime","Contest of \"how long can we go without a restart\"",function(msg,args){
 	var uptime = flexbot.bot.uptime
@@ -128,7 +128,7 @@ flexbot.addCommand("emoji","Get an image of an emoji/custom emote.",function(msg
 			msg.channel.createMessage("Emoji not found.")
 		}
 	}
-})
+},["emote","e"])
 
 flexbot.addCommand("transfer","Send credits to people.",function(msg,args){
 	if(!args){
@@ -196,3 +196,41 @@ flexbot.addCommand("transfer","Send credits to people.",function(msg,args){
 		msg.channel.createMessage("User not found. Make sure to use mentions.")
 	}
 })
+
+flexbot.addCommand("servers","A pagenated server list",function(msg,args){
+	let servers = []
+	flexbot.bot.guilds.forEach(s=>{
+		servers.push(s)
+	})
+	servers.sort((a,b)=>{
+		if(a.memberCount>b.memberCount) return -1;
+		if(a.memberCount<b.memberCount) return 1;
+		if(a.memberCount==b.memberCount) return 0;
+	})
+
+	let index = 1
+	if(args) index=parseInt(args);
+	let list = []
+	let page = servers.slice((index-1)*10,(index*10))
+	for(i=0;i<page.length;i++){
+		let bots = 0;
+		let s = page[i]
+		s.members.forEach(m=>{if(m.bot) ++bots;})
+		list.push({name:((i+1)+((index-1)*10))+". "+s.name,value:s.memberCount+" members \n"+bots+" bots ("+Math.floor((bots/s.memberCount)*100)+"%)"})
+	}
+	msg.channel.createMessage("",{},{
+		color:0x7289DA,
+
+		author:{
+			name:"FlexBot Server List - Page "+index,
+			icon_url:"https://twemoji.maxcdn.com/36x36/1f4d1.png"
+		},
+		footer:{
+			text:"Total servers: "+flexbot.bot.guilds.size,
+			icon_url:"https://twemoji.maxcdn.com/36x36/1f522.png"
+		},
+		fields:list
+	})
+	
+	//"```markdown\n# FlexBot Server List - Page "+(index)+"\n"+list+"# Total servers: "+flexbot.bot.guilds.size+"\n```"
+},["guilds"])
