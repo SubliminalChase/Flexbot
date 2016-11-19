@@ -12,21 +12,17 @@ flexbot.addCommand("status","Sets bots status",function(msg,args){
 
 flexbot.addCommand("avatar","Get an avatar of someone",function(msg,args){
 	var request = require('request').defaults({encoding:null});
-	if(msg.mentions[0]){
-		var u = msg.mentions[0]
+		let u;
+		if(/\D/.test(args)){
+			u = flexbot.bot.users.get(args.replace(/\D/g,""))
+		}else{
+			u = msg.author
+		}
 		request.get(u.avatarURL,function(e,res,body){
 			if(!e && res.statusCode == 200){
 				msg.channel.createMessage(`Avatar for **${u.username}#${u.discriminator}**:`,{name:"avatar.png",file:new Buffer(body)})
 			}
 		})
-	}else{
-		var u = msg.author
-		request.get(u.avatarURL,function(e,res,body){
-			if(!e && res.statusCode == 200){
-				msg.channel.createMessage(`Avatar for **${u.username}#${u.discriminator}**:`,{name:"avatar.png",file:new Buffer(body)})
-			}
-		})
-	}
 })
 
 flexbot.addCommand("roll","Roll dice",function(msg,args){
@@ -123,39 +119,16 @@ flexbot.addCommand("slots","A place to spend your credits.",function(msg,args){
 	}
 })
 
-flexbot.addCommand("love","Give FlexBot some love",function(msg,args){
-	let a = args.split(" ")
-	if(!args){
-		flexbot.sql.query("SELECT * FROM flexbot WHERE id=1",(e,d)=>{
-			if(!e){
-				msg.channel.createMessage("I've currently been loved "+d[0].love+" times and currently inherit "+d[0].credits+" credits.\n\nTo give love, use the argument `add`.\nTo gift credits, use the argument `gift amt`")
-			}
-		})
-	}else if(args=="add"){
-		flexbot.sql.query("UPDATE flexbot SET love=love+1 WHERE id=1")
-		msg.channel.createMessage("D'awww, thanks :heart:")
-	}else if(a[0]=="gift"){
-		if(a[1]){
-			flexbot.sql.query("SELECT credits FROM userdata WHERE userid="+msg.author.id,(e,d)=>{
-				if(!e){
-					if(!d[0]){
-						flexbot.sql.query("INSERT INTO userdata VALUES ("+msg.author.id+",0,0,0)")
-						msg.channel.createMessage("You don't seem to have the money to give me anything, but thanks for caring about me.")
-					}else if(d[0].credits >= parseInt(a[1])){
-						flexbot.sql.query("UPDATE userdata SET credits = credits-"+parseInt(a[1])+" WHERE userid="+msg.author.id)
-						flexbot.sql.query("UPDATE flexbot SET credits = credits+"+parseInt(a[1])+" WHERE id=1")
-						msg.channel.createMessage("Aww, thank you! *gives you a hug* :heart:")
-					}else{
-						msg.channel.createMessage("You don't seem to have enough. Try a lower value maybe?")
-					}
-				}
-			})
-		}else{
-			msg.channel.createMessage("You didn't specify an amount silly.")
-		}
-	}
-})
-
 flexbot.addCommand("info","It's like a business card in a message",function(msg,args){
-	msg.channel.createMessage("**__FlexBot v8__**\nA bot written by Flex\nLibrary: Eris | Language: JS\nGithub: <https://github.com/LUModder/FlexBot>\nInvite: https://flexbox.xyz/flexbot/invite\nServer: <https://discord.gg/ZcXh4ek>")
+	msg.channel.createMessage("",{},{
+		color:0xEB0763,
+		title:"FlexBot v8",
+		url:"https://flexbox.xyz/flexbot",
+		author:{
+			name:"A bot written by Flex#5917",
+			icon_url:"https://flexbox.xyz/assets/img/Avatar9.png"
+		},
+		description:"**Language**: Javascript\n**Library**: Eris\n\n[GitHub](https://github.com/LUModder/FlexBot) | [Invite](https://flexbox.xyz/flexbot/invite) | [Server](https://flexbox.xyz/discord)"
+	})
+	//Github: <https://github.com/LUModder/FlexBot>\nInvite: <https://flexbox.xyz/flexbot/invite>\nServer: <https://flexbox.xyz/discord>
 },["about"])

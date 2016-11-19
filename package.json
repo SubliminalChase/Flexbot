@@ -9,16 +9,16 @@
   "author": "Flex",
   "license": "N/A",
   "dependencies": {
-    "dgram": "^1.0.1",
-    "dgram-as-promised": "0.0.2",
+    "async": "^2.1.2",
     "eris": "github:abalabahaha/eris#dev",
+    "gm": "^1.23.0",
     "mathjs": "^3.6.0",
-    "mysql-wrap": "^0.5.3",
+    "mysql": "^",
     "node-emoji": "^1.4.1",
-    "node-mysql": "^0.4.2",
     "request": "^2.76.0",
     "require-reload": "^0.2.2",
     "svg2png": "^4.0.0",
-    "twemoji": "^2.2.0"
+    "twemoji": "^2.2.0",
+    "xml2js": "^0.4.17"
   }
 }

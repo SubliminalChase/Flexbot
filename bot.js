@@ -226,14 +226,16 @@ var prefix = flexbot.prefix;
 var prefix2 = flexbot.prefix2;
 bot.on("messageCreate",(msg) => {
 	if(!msg.author.bot){
+		var prefix3 = flexbot.bot.user.mention;
 		var c = msg.content.split(" ")
-		var args = c.splice(1,c.length).join(" ")
+		var args = c.splice((msg.content.substring(0,prefix3.length) == prefix3 ? 2 : 1),c.length).join(" ")
 		var cmd = c[0]
+		if(msg.content.substring(0,prefix3.length) == prefix3) cmd=c.splice(0,2).join(" ");
 		
 		for(item in cmds){
 			if(cmds[item].aliases.length > 0){
 				for(n in cmds[item].aliases){
-					if(cmd == prefix+cmds[item].aliases[n] || cmd == prefix2+cmds[item].aliases[n] || cmd == prefix+cmds[item].name || cmd == prefix2+cmds[item].name){
+					if(cmd == prefix+cmds[item].aliases[n] || cmd == prefix2+cmds[item].aliases[n] || cmd == prefix3+" "+cmds[item].aliases[n] || cmd == prefix+cmds[item].name || cmd == prefix2+cmds[item].name || cmd == prefix3+" "+cmds[item].name){
 						try{
 							logCommand(cmd,msg,args)
 							cmds[item].func(msg,args)
@@ -243,7 +245,7 @@ bot.on("messageCreate",(msg) => {
 						}
 					}
 				}
-			}else if(cmd == prefix+cmds[item].name || cmd == prefix2+cmds[item].name){
+			}else if(cmd == prefix+cmds[item].name || cmd == prefix2+cmds[item].name || cmd == prefix3+" "+cmds[item].name){
 					try{
 						logCommand(cmd,msg,args)
 						cmds[item].func(msg,args)
@@ -258,10 +260,6 @@ bot.on("messageCreate",(msg) => {
 			bot.createMessage(msg.channel.id,emoji.get(":ok_hand:"))
 			setTimeout(process.exit,1000)
 		}
-		
-		if(msg.cleanContent.substring(0,8) == "@FlexBot"){
-			msg.channel.createMessage("Mentioning me is not a prefix due to possible conflicts with other commands. My prefixes are `"+prefix+"` and `"+prefix2+"`")
-		}
 	}
 });
 
@@ -275,9 +273,9 @@ bot.on("guildCreate",s=>{
 			bot.createMessage(logid,"",{},{
 				author:{
 					name:"Joined Server: "+s.name,
-					icon_url:"https://twemoji.maxcdn.com/36x36/2705.png"
+					icon_url:"https://cdn.discordapp.com/emojis/230092636835414026.png"
 				},
-				color:0x00C000,
+				color:0x42B581,
 				description:"**Owner**: "+s.members.get(s.ownerID).username+"#"+s.members.get(s.ownerID).discriminator+"\n**Members**: "+s.memberCount+"\n**Bots: "+bots+" ("+Math.floor((bots/s.memberCount)*100)+"%)"
 			})
 	}
@@ -291,9 +289,9 @@ bot.on("guildDelete",s=>{
 	bot.createMessage(logid,"",{},{
 		author:{
 			name:"Left Server: "+s.name,
-			icon_url:"https://twemoji.maxcdn.com/36x36/274e.png"
+			icon_url:"https://cdn.discordapp.com/emojis/230092636852191232.png"
 		},
-		color:0xC00000
+		color:0xF04946
 	})
 })
 
