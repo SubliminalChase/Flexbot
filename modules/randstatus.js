@@ -4,13 +4,13 @@ var path = require("path")
 var dbotsapi = require(path.join(__dirname,"..","config.json")).dbotsapi
 
 function randStatus(){
+	let cmds = 0;
+	for(c in flexbot.cmds){cmds++};
 	var slist = [
 		"on "+flexbot.bot.guilds.size+" servers.",
-		emoji.get(":hammer:")+".gq",
-		emoji.get(":floppy_disk:")+".cf",
-		emoji.get(":eyes:")+".gq",
+		"f!$help",
 		"flexbox.xyz",
-		"with "+flexbot.cmds.length+" commands.",
+		"with "+cmds+" commands.",
 		"with "+flexbot.bot.users.size+" users."
 	]
 
@@ -21,7 +21,7 @@ function randStatus(){
 
 function updateDBots(){
 	var request = require('request').defaults({encoding:null});
-	request.post("https://bots.discord.pw/api/bots/"+flexbot.bot.user.id+"/stats",{header:{authorization:dbotsapi},form:{server_count:flexbot.bot.guilds.size}})
+	request.post("https://bots.discord.pw/api/bots/"+flexbot.bot.user.id+"/stats",{headers:{"Authorization":dbotsapi},form:{server_count:flexbot.bot.guilds.size}})
 }
 
 if(flexbot.stimer) clearInterval(flexbot.stimer);

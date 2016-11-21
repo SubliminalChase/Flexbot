@@ -3,7 +3,7 @@ var emoji = require("node-emoji")
 var request = require('request')
 var xml2js = require("xml2js")
 
-flexbot.addCommand("e621","[NSFW] Gets an image from e621 either randomly or if tags given.",function(msg,args){
+flexbot.addCommand("e621","[NSFW] Gets an image from e621.",function(msg,args){
 	if(!msg.guild || msg.channel.name.indexOf("nsfw") > -1 || msg.channel.topic.indexOf("[nsfw]") > -1){
 		let tags = [];
 		if(args) tags = JSON.parse(JSON.stringify(args.split(" ")));
@@ -35,7 +35,7 @@ flexbot.addCommand("e621","[NSFW] Gets an image from e621 either randomly or if 
 	}
 })
 
-flexbot.addCommand("gelbooru","[NSFW] Gets an image from Gelbooru either randomly or if tags given.",function(msg,args){
+flexbot.addCommand("gelbooru","[NSFW] Gets an image from Gelbooru.",function(msg,args){
 	if(!msg.guild || msg.channel.name.indexOf("nsfw") > -1 || msg.channel.topic.indexOf("[nsfw]") > -1){
 		let tags = [];
 		if(args) tags = JSON.parse(JSON.stringify(args.split(" ")));
@@ -67,7 +67,7 @@ flexbot.addCommand("gelbooru","[NSFW] Gets an image from Gelbooru either randoml
 	}
 },["gb","gel"])
 
-flexbot.addCommand("rule34","[NSFW] Gets an image from Rule 34 either randomly or if tags given.",function(msg,args){
+flexbot.addCommand("rule34","[NSFW] Gets an image from Rule 34.",function(msg,args){
 	if(!msg.guild || msg.channel.name.indexOf("nsfw") > -1 || msg.channel.topic.indexOf("[nsfw]") > -1){
 		let tags = [];
 		if(args) tags = JSON.parse(JSON.stringify(args.split(" ")));
@@ -76,7 +76,7 @@ flexbot.addCommand("rule34","[NSFW] Gets an image from Rule 34 either randomly o
 		for(t in tags){
 			tagss+=tags[t]+"%20"
 		}
-		request.get("https://rule34.xxx/index.php?page=dapi&s=post&q=index&limit=50&tags="+tagss,{headers:{"User-Agent":"FlexBot/8.0 (Flex)"}},function(e,res,body){
+		request.get("http://rule34.xxx/index.php?page=dapi&s=post&q=index&limit=50&tags="+tagss,{headers:{"User-Agent":"FlexBot/8.0 (Flex)"}},function(e,res,body){
 			if(!e && res.statusCode == 200){
 				let data;
 				xml2js.parseString(body,(err,d)=>{data=d})
@@ -86,7 +86,7 @@ flexbot.addCommand("rule34","[NSFW] Gets an image from Rule 34 either randomly o
 					color:0xAAE5A3,
 					description:"**Score**: "+post.score+"\n**Rating**: "+post.rating+"\n**Tags**: \n```"+post.tags+"```\n\n[Full Sized]("+post.file_url+")",
 					image:{
-						url:post.sample_url
+						url:"http:"+post.sample_url
 					}
 				})
 				}else{

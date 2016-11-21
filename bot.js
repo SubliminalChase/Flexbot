@@ -267,7 +267,7 @@ bot.on("guildCreate",s=>{
 	flexbot.sql.query("SELECT * FROM serverconfig WHERE id="+s.id,(e,d)=>{
 			if(!e){
 				if(!d[0]){
-					flexbot.sql.query("INSERT INTO serverconfig VALUES ("+s.id+")")
+					flexbot.sql.query("INSERT INTO serverconfig VALUES ("+s.id+",0)")
 		let bots = 0
 		s.members.forEach(m=>{if(m.bot) ++bots;})
 			bot.createMessage(logid,"",{},{

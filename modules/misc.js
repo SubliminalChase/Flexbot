@@ -92,6 +92,7 @@ flexbot.addCommand("slots","A place to spend your credits.",function(msg,args){
 					res+="\n:arrow_forward:"+s[0][1]+s[1][1]+s[2][1]+":arrow_backward:"
 					res+="\n:white_large_square:"+s[0][2]+s[1][2]+s[2][2]+":white_large_square:"
 					res+="\n:black_large_square::white_large_square::black_large_square::white_large_square::black_large_square:"
+					res=res.replace("\ufe0f","")
 				if(s[0][1] == s[1][1] == s[2][1]){
 					if(s[0][1] == semoji[4]){
 						res+="\n\nYou have won: "+(500*parseInt(args))
@@ -130,5 +131,28 @@ flexbot.addCommand("info","It's like a business card in a message",function(msg,
 		},
 		description:"**Language**: Javascript\n**Library**: Eris\n\n[GitHub](https://github.com/LUModder/FlexBot) | [Invite](https://flexbox.xyz/flexbot/invite) | [Server](https://flexbox.xyz/discord)"
 	})
-	//Github: <https://github.com/LUModder/FlexBot>\nInvite: <https://flexbox.xyz/flexbot/invite>\nServer: <https://flexbox.xyz/discord>
 },["about"])
+
+flexbot.addCommand("stats","Oooh, numbers",function(msg,args){
+	let uptime = flexbot.bot.uptime
+	let s = uptime/1000
+	let h = parseInt(s/3600)
+	s=s%3600
+	let m = parseInt(s/60)
+	s=s%60
+	s=parseInt(s)
+	
+	let tstr = (h < 10 ? "0"+h : h)+":"+(m < 10 ? "0"+m : m)+":"+(s < 10 ? "0"+s : s)
+	
+	let cmdcount = 0
+	for(c in flexbot.cmds){cmdcount++}
+
+	msg.channel.createMessage("",{},{
+		color:0x009682,
+		author:{
+			name:"FlexBot Stats",
+			icon_url:flexbot.bot.user.avatarURL
+		},
+		description:"**Servers**: "+flexbot.bot.guilds.size+"\n**Users Seen**: "+flexbot.bot.users.size+"\n**Commands**: "+cmdcount+"\n**Uptime**: "+tstr
+	})
+})
