@@ -41,7 +41,7 @@ flexbot.bot.on("messageCreate",(msg)=>{
 					if(d[0] && d[0].pmmentions==1){
 							flexbot.bot.getDMChannel(msg.mentions[i].id)
 						.then((c)=>{
-								flexbot.bot.createMessage(c.id,"",{},{
+								flexbot.bot.createMessage(c.id,{embed:{
 title:"Mentioned in message",
 description:msg.cleanContent,
 color:0x7289DA,
@@ -54,8 +54,7 @@ footer:{
 	text:"#"+msg.channel.name+" on "+msg.guild.name,
 	icon_url:"https://cdn.discordapp.com/icons/"+msg.guild.id+"/"+msg.guild.icon+".jpg"
 }
-})
-								//"Mentioned in message in <#"+msg.channel.id+"> ("+msg.guild.name+"):\n**"+msg.author.username+"#"+msg.author.discriminator+"**: "+msg.cleanContent)
+}})
 						})
 					}
 				}

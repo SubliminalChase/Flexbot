@@ -13,8 +13,8 @@ flexbot.addCommand("status","Sets bots status",function(msg,args){
 flexbot.addCommand("avatar","Get an avatar of someone",function(msg,args){
 	var request = require('request').defaults({encoding:null});
 		let u;
-		if(/\D/.test(args)){
-			u = flexbot.bot.users.get(args.replace(/\D/g,""))
+		if(/[0-9]{17,21}/.test(args)){
+			u = flexbot.bot.users.get(args.match(/[0-9]{17,21}/g)[0])
 		}else{
 			u = msg.author
 		}
@@ -48,80 +48,8 @@ flexbot.addCommand("roll","Roll dice",function(msg,args){
 	})
 },["dice"])
 
-var semoji = [
-	":cherries:",
-	":spades:",
-	":lemon:",
-	":diamonds:",
-	":seven:",
-	":clubs:",
-	":apple:",
-	":eyes:",
-	":hearts:",
-	":money_with_wings:"
-]
-
-flexbot.addCommand("slots","A place to spend your credits.",function(msg,args){
-	args = args ? args : "10"
-	if(parseInt(args) < 10){
-		msg.channel.createMessage("You can only bet above 10 credits.")
-	}else{
-	flexbot.sql.query("SELECT credits FROM userdata WHERE userid="+msg.author.id,(e,d)=>{
-		if(!e){
-			if(!d[0]){
-				flexbot.sql.query("INSERT INTO userdata VALUES ("+msg.author.id+",0,0,0)")	
-				msg.channel.createMessage("You don't have enough credits.")
-			}else{
-				if(d[0].credits >= parseInt(args)){
-					flexbot.sql.query("UPDATE userdata SET credits = credits-"+args+" WHERE userid="+msg.author.id)
-					var res = ":regional_indicator_s:\u200b:regional_indicator_l::regional_indicator_o::regional_indicator_t::regional_indicator_s:\n:black_large_square::white_large_square::black_large_square::white_large_square::black_large_square:"
-					
-					var s = [
-						[],
-						[],
-						[]
-					]
-					for(i=0;i<3;i++){
-						var rnd = Math.floor(Math.random()*semoji.length)
-						s[i] = []
-						s[i][0] = rnd==0 ? semoji[semoji.length-1] : semoji[rnd-1]
-						s[i][1] = semoji[rnd]
-						s[i][2] = rnd==semoji.length-1 ? semoji[0] : semoji[rnd+1]
-					}		
-					res+="\n:white_large_square:"+s[0][0]+s[1][0]+s[2][0]+":white_large_square:"
-					res+="\n:arrow_forward:"+s[0][1]+s[1][1]+s[2][1]+":arrow_backward:"
-					res+="\n:white_large_square:"+s[0][2]+s[1][2]+s[2][2]+":white_large_square:"
-					res+="\n:black_large_square::white_large_square::black_large_square::white_large_square::black_large_square:"
-					res=res.replace("\ufe0f","")
-				if(s[0][1] == s[1][1] == s[2][1]){
-					if(s[0][1] == semoji[4]){
-						res+="\n\nYou have won: "+(500*parseInt(args))
-						flexbot.sql.query("UPDATE userdata SET credits = credits+"+(500*parseInt(args))+" WHERE userid="+msg.author.id)
-					}else if(s[0][1] == semoji[7]){
-						res+="\n\nYou have won: "+(1000*parseInt(args))
-						flexbot.sql.query("UPDATE userdata SET credits = credits+"+(1000*parseInt(args))+" WHERE userid="+msg.author.id)
-					}else if(s[0][1] == semoji[9]){
-						res+="\n\nJackpot! You have won: "+(100000*parseInt(args))
-						flexbot.sql.query("UPDATE userdata SET credits = credits+"+(100000*parseInt(args))+" WHERE userid="+msg.author.id)
-					}else{
-						res+="\n\nYou have won: "+(100*parseInt(args))
-						flexbot.sql.query("UPDATE userdata SET credits = credits+"+(100*parseInt(args))+" WHERE userid="+msg.author.id)
-					}
-				}else{
-					res+="\n\nSorry, you won nothing."
-				}
-					msg.channel.createMessage(emoji.emojify(res))
-				}else{
-					msg.channel.createMessage("You don't have enough credits.")
-				}
-			}
-		}
-	})
-	}
-})
-
 flexbot.addCommand("info","It's like a business card in a message",function(msg,args){
-	msg.channel.createMessage("",{},{
+	msg.channel.createMessage({embed:{
 		color:0xEB0763,
 		title:"FlexBot v8",
 		url:"https://flexbox.xyz/flexbot",
@@ -130,7 +58,7 @@ flexbot.addCommand("info","It's like a business card in a message",function(msg,
 			icon_url:"https://flexbox.xyz/assets/img/Avatar9.png"
 		},
 		description:"**Language**: Javascript\n**Library**: Eris\n\n[GitHub](https://github.com/LUModder/FlexBot) | [Invite](https://flexbox.xyz/flexbot/invite) | [Server](https://flexbox.xyz/discord)"
-	})
+	}})
 },["about"])
 
 flexbot.addCommand("stats","Oooh, numbers",function(msg,args){
@@ -147,12 +75,28 @@ flexbot.addCommand("stats","Oooh, numbers",function(msg,args){
 	let cmdcount = 0
 	for(c in flexbot.cmds){cmdcount++}
 
-	msg.channel.createMessage("",{},{
+	msg.channel.createMessage({embed:{
 		color:0x009682,
 		author:{
 			name:"FlexBot Stats",
 			icon_url:flexbot.bot.user.avatarURL
 		},
 		description:"**Servers**: "+flexbot.bot.guilds.size+"\n**Users Seen**: "+flexbot.bot.users.size+"\n**Commands**: "+cmdcount+"\n**Uptime**: "+tstr
-	})
+	}})
 })
+
+flexbot.addCommand("invite","Invite FlexBot to your server!",function(msg,args){
+	msg.channel.createMessage({embed:{
+		color:0xEB0763,
+		author:{
+			name:"Thank You!",
+			icon_url:"https://twemoji.maxcdn.com/36x36/1f49a.png"
+		},
+		description:"Thank you for being interested in me and I hope you enjoy using me!\n\n(Please note, if you're planning to invite me to a bot collection server, I will leave)\n\n[Invite Link](https://flexbox.xyz/flexbot)"
+	}})
+})
+
+flexbot.addCommand("calc","Do maths",function(msg,args){
+	let math = require("mathjs");
+	msg.channel.createMessage("Result: "+math.eval(args));
+},["math"])

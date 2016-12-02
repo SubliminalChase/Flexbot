@@ -4,21 +4,27 @@ global.flexbot = {};
 const flexbot = global.flexbot
 flexbot.bot = new Eris(config.token);
 flexbot.prefix = "flexbot.";
-flexbot.prefix2 = "f!$";
+flexbot.prefix2 = "f!";
 flexbot.oid = config.ownerid;
+flexbot.dbotsapi = config.dbotsapi
 
+var request = require('request')
 var util = require("util");
 var fs = require("fs");
 var path = require("path");
 var emoji = require("node-emoji");
 var mysql = require("mysql");
 var reload = require("require-reload")(require);
+
 flexbot.sql =  mysql.createConnection(config.mysql);
 flexbot.sql.connect();
 
 var bot = flexbot.bot
 bot.on("ready", () => {
 	console.log("Loaded FlexBot");
+
+	request.post("https://bots.discord.pw/api/bots/"+bot.user.id+"/stats",{headers:{"Authorization":config.dbotsapi},json:{server_count:bot.guilds.size}});
+	
 	bot.getDMChannel(config.ownerid)
 		.then((c)=>{
 			bot.createMessage(c.id,emoji.get(":white_check_mark:")+" Loaded FlexBot")
@@ -36,20 +42,37 @@ var logid = "246322719044403201"
 flexbot.logid = logid;
 
 function logCommand(cmd,msg,args){
-	//let out = "```diff\n% Command Log:\n+ Command: "+cmd+"\n+ Args: "+args.substring(0,10)+"...\n- User: "+msg.author.username+"#"+msg.author.discriminator+"\n- Channel: "+(msg.channel.name ? msg.channel.name : "DM")+"\n- Server: "+(msg.guild ? msg.guild.name : "DM")+"\n```";
-	bot.createMessage(logid,"",{},{
-				author:{
-					name:"Command Log",
-					icon_url:"https://twemoji.maxcdn.com/36x36/1f4dc.png"
-				},
-				color:0xEA5F14,
-				description:"Command: "+cmd+"\nArgs: "+args.substring(0,20)+"...\nUser: "+msg.author.username+"#"+msg.author.discriminator,
-				footer:{
-					text:msg.guild ? msg.channel.name+" on "+msg.guild.name : "Private Message",
-					icon_url:msg.guild ? "https://cdn.discordapp.com/icons/"+msg.guild.id+"/"+msg.guild.icon+".jpg" : "https://twemoji.maxcdn.com/36x36/2709.png"
-				}
-			})
+	bot.createMessage(logid,{embed:{
+		author:{
+			name:"Command Log",
+			icon_url:"http://www.famfamfam.com/lab/icons/silk/icons/application_xp_terminal.png"
+		},
+		color:0xdf8000,
+		description:"Command: "+cmd+"\nArgs: "+args+"\nUser: "+msg.author.username+"#"+msg.author.discriminator,
+		footer:{
+			text:msg.guild ? "#"+msg.channel.name+" on "+msg.guild.name : "Private Message",
+			icon_url:msg.guild ? "https://cdn.discordapp.com/icons/"+msg.guild.id+"/"+msg.guild.icon+".jpg" : "http://www.famfamfam.com/lab/icons/silk/icons/user_comment.png"
+		},
+		timestamp:new Date()
+	}})
 }
+
+function logError(cmd,msg,args,error){
+	bot.createMessage(logid,{embed:{
+		author:{
+			name:"Command Error",
+			icon_url:"http://www.famfamfam.com/lab/icons/silk/icons/error.png"
+		},
+		color:0xdfdf00,
+		description:"Command: "+cmd+"\nArgs: "+args+"\nUser: "+msg.author.username+"#"+msg.author.discriminator+"\nError:\n```\n"+error+"\n```",
+		footer:{
+			text:msg.guild ? "#"+msg.channel.name+" on "+msg.guild.name : "Private Message",
+			icon_url:msg.guild ? "https://cdn.discordapp.com/icons/"+msg.guild.id+"/"+msg.guild.icon+".jpg" : "http://www.famfamfam.com/lab/icons/silk/icons/user_comment.png"
+		},
+		timestamp:new Date()
+	}})
+}
+
 
 var cmds = {
 	help:{
@@ -74,7 +97,12 @@ var cmds = {
 			}
 			
 			bot.getDMChannel(msg.author.id).then((c)=>{
-				bot.createMessage(c.id,res)
+			if(res.length > 2000){
+				c.createMessage(res.substring(0,2000))
+				c.createMessage(res.substring(2000,res.length))
+			}else{
+				c.createMessage(res)
+			}
 			})
 		},
 		aliases:["cmds","commands"]
@@ -241,7 +269,7 @@ bot.on("messageCreate",(msg) => {
 							cmds[item].func(msg,args)
 						}catch(e){
 							logCommand(cmd,msg,args)
-									bot.createMessage(logid,emoji.get(":warning:")+" Error in command: "+cmd+"\n```\n"+e+"\n```")
+							logError(cmd,msg,args,e)
 						}
 					}
 				}
@@ -251,7 +279,7 @@ bot.on("messageCreate",(msg) => {
 						cmds[item].func(msg,args)
 					}catch(e){
 						logCommand(cmd,msg,args)
-								bot.createMessage(logid,emoji.get(":warning:")+" Error in command: "+cmd+"\n```\n"+e+"\n```")
+						logError(cmd,msg,args,e)
 					}
 				}
 		}
@@ -267,32 +295,49 @@ bot.on("guildCreate",s=>{
 	flexbot.sql.query("SELECT * FROM serverconfig WHERE id="+s.id,(e,d)=>{
 			if(!e){
 				if(!d[0]){
-					flexbot.sql.query("INSERT INTO serverconfig VALUES ("+s.id+",0)")
+					flexbot.sql.query("INSERT INTO serverconfig (id) VALUES ("+s.id+")")
 		let bots = 0
 		s.members.forEach(m=>{if(m.bot) ++bots;})
-			bot.createMessage(logid,"",{},{
+			bot.createMessage(logid,{embed:{
 				author:{
 					name:"Joined Server: "+s.name,
-					icon_url:"https://cdn.discordapp.com/emojis/230092636835414026.png"
+					icon_url:"http://www.famfamfam.com/lab/icons/silk/icons/server_add.png"
 				},
 				color:0x42B581,
-				description:"**Owner**: "+s.members.get(s.ownerID).username+"#"+s.members.get(s.ownerID).discriminator+"\n**Members**: "+s.memberCount+"\n**Bots: "+bots+" ("+Math.floor((bots/s.memberCount)*100)+"%)"
-			})
+				description:"**Owner**: "+s.members.get(s.ownerID).username+"#"+s.members.get(s.ownerID).discriminator+"\n**Members**: "+s.memberCount+"\n**Bots**: "+bots+" ("+Math.floor((bots/s.memberCount)*100)+"%)",
+				footer:{
+					text:"Time",
+					icon_url:"http://www.famfamfam.com/lab/icons/silk/icons/time.png"
+				},
+				timestamp:new Date()
+			}})
+			
+			s.defaultChannel.createMessage("Hello, I am FlexBot, a multipurpose bot written by **Flex#5917**. My prefixes are `"+flexbot.prefix+"` and `"+flexbot.prefix2+"` or you can mention me. Here are a few things I can do:\n\t- Moderation logging\n\t- Leveling and credit system\n\t- Various info and utility commands\n\t- NSFW Commands\n\nIf you feel like you need something you can leave a suggestion with the `suggest` command. For more info and support, see the `info` command.")
 	}
 	}
 	})
+	
+	request.post("https://bots.discord.pw/api/bots/"+bot.user.id+"/stats",{headers:{"Authorization":config.dbotsapi},json:{server_count:bot.guilds.size}});
 })
 
 bot.on("guildDelete",s=>{
 	flexbot.sql.query("DELETE FROM serverconfig WHERE id="+s.id)
 
-	bot.createMessage(logid,"",{},{
+	bot.createMessage(logid,{embed:{
 		author:{
-			name:"Left Server: "+s.name,
-			icon_url:"https://cdn.discordapp.com/emojis/230092636852191232.png"
+			name:"Left Server:",
+			icon_url:"http://www.famfamfam.com/lab/icons/silk/icons/server_delete.png"
 		},
+		description:s.name,
+		footer:{
+			text:"Time",
+			icon_url:"http://www.famfamfam.com/lab/icons/silk/icons/time.png"
+		},
+		timestamp:new Date(),
 		color:0xF04946
-	})
+	}})
+	
+	request.post("https://bots.discord.pw/api/bots/"+bot.user.id+"/stats",{headers:{"Authorization":config.dbotsapi},json:{server_count:bot.guilds.size}});
 })
 
 bot.connect();

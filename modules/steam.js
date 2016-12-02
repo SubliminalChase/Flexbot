@@ -22,7 +22,6 @@ flexbot.addCommand("steam","All in one Steam command. do `steam help` for argume
 						if(data.success != 1){
 							flexbot.bot.editMessage(msg.channel.id,m.id,"User not found.")
 						}else{
-							var output = "```prolog\nUser data for: \""+sargs[1]+"\"\n"
 							request.get(steam.url+"ISteamUser/GetPlayerSummaries/v2/?key="+steam.key+"&steamids="+data.steamid+"&format=json",(e,res2,body2)=>{
 								let data2 = JSON.parse(body2).response.players[0];
 								let odd = parseInt(data.steamid)%2 == 1 ? 1 : 0;
@@ -30,13 +29,17 @@ flexbot.addCommand("steam","All in one Steam command. do `steam help` for argume
 								request.get(steam.url+"IPlayerService/GetSteamLevel/v1/?key="+steam.key+"&steamid="+data.steamid+"&format=json",function(e,lres,lbody){
 			if(!e && lres.statusCode == 200){
 				let ldata = JSON.parse(lbody).response
-				output+="\tName: "+data2.personaname+"\n\tLevel: "+ldata.player_level+"\n\tSteamID64: "+data2.steamid+"\n\tSteamID16: STEAM_0:"+odd+":"+sid16+"\n\tAvatar URL: "+data2.avatarfull+"\n```"
-				flexbot.bot.editMessage(msg.channel.id,m.id,output)
-								request.get(data2.avatarfull,function(e,ares,abody){
-			if(!e && ares.statusCode == 200){
-				msg.channel.createMessage("",{name:"steam_avatar.png",file:new Buffer(abody)})
-			}
-		})
+				flexbot.bot.editMessage(msg.channel.id,m.id,{embed:{
+				author:{
+					name:data2.personaname+" ("+sargs[1]+")",
+					icon_url:data2.avatarfull
+				},
+				color:0x1C53A7,
+				description:"**Level**: "+ldata.player_level+"\n**SteamID64**: "+data2.steamid+"\n**SteamID16**: STEAM_0:"+odd+":"+sid16+"\n[Avatar]( "+data2.avatarfull+")",
+				image:{
+					url:data2.avatarfull
+				}
+			}})
 		}
 		})
 							})

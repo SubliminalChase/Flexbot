@@ -2,10 +2,10 @@ var flexbot = global.flexbot
 var bot = flexbot.bot
 var emoji = require("node-emoji")
 var async = require("async")
+var request = require('request').defaults({encoding:null});
 
 flexbot.addCommand("setavatar","Changes bots avatar to a url.",function(msg,args){
 	if(flexbot.isOwner(msg)){
-		var request = require('request').defaults({encoding:null});
 		if(args.length>0){
 			request.get(args,function(e,res,body){
 				if(!e && res.statusCode == 200){
@@ -135,9 +135,9 @@ flexbot.addCommand("emoji","Get an image of an emoji/custom emote.",function(msg
 flexbot.addCommand("transfer","Send credits to people.",function(msg,args){
 	if(!args){
 		msg.channel.createMessage("No arguments given.")
-	}else if(/\D/.test(args)){
+	}else if(/[0-9]{17,21}/.test(args)){
 		let a = args.split(",")
-		let u = flexbot.bot.users.get(a[0].replace(/\D/g,""))
+		let u = flexbot.bot.users.get(a[0].match(/[0-9]{17,21}/g)[0])
 		let amt = a[1]
 		if(!amt){
 			msg.channel.createMessage("Missing amount.")
@@ -220,7 +220,7 @@ flexbot.addCommand("servers","A pagenated server list",function(msg,args){
 		s.members.forEach(m=>{if(m.bot) ++bots;})
 		list+=((i+1)+((index-1)*10))+". **"+s.name+"**\n\t"+s.memberCount+" members | "+bots+" bots ("+Math.floor((bots/s.memberCount)*100)+"%)\n"
 	}
-	msg.channel.createMessage("",{},{
+	msg.channel.createMessage({embed:{
 		color:0x7289DA,
 
 		author:{
@@ -232,9 +232,7 @@ flexbot.addCommand("servers","A pagenated server list",function(msg,args){
 			icon_url:"https://twemoji.maxcdn.com/36x36/1f522.png"
 		},
 		description:list
-	})
-	
-	//"```markdown\n# FlexBot Server List - Page "+(index)+"\n"+list+"# Total servers: "+flexbot.bot.guilds.size+"\n```"
+	}})
 },["guilds"])
 
 var scolors = {
@@ -246,8 +244,8 @@ var scolors = {
 
 flexbot.addCommand("userinfo","Get info about a user",function(msg,args){
 	let u;
-	if(/\D/.test(args)){
-		u = msg.guild ? msg.guild.members.get(args.replace(/\D/g,"")) : flexbot.bot.users.get(args.replace(/\D/g,""));
+	if(/[0-9]{17,21}/.test(args)){
+		u = msg.guild ? msg.guild.members.get(args.match(/[0-9]{17,21}/g)[0]) : flexbot.bot.users.get(args.match(/[0-9]{17,21}/g)[0]);
 	}else{
 		u = msg.guild ? msg.member : msg.author
 	}
@@ -259,15 +257,18 @@ flexbot.addCommand("userinfo","Get info about a user",function(msg,args){
 		})
 	}
 	
-	msg.channel.createMessage("",{},{
+	msg.channel.createMessage({embed:{
 		color:scolors[u.status],
 
 		author:{
 			name:u.username+"#"+u.discriminator,
 			icon_url:u.avatarURL
 		},
-		description:"**ID**: "+u.id+"\n**Nick**: "+(u.nick ? u.nick : "")+"\n**Playing**: "+(u.game ? u.game.name : "")+"\n**Roles**: "+roles.join(", ")+"\n[Avatar]("+u.avatarURL+")"
-	})
+		description:"**ID**: "+u.id+"\n**Nick**: "+(u.nick ? u.nick : "")+"\n**Playing**: "+(u.game ? u.game.name : "")+"\n**Roles**: "+roles.join(", ")+"\n[Avatar]("+u.avatarURL+")",
+		image:{
+			url:u.avatarURL
+		}
+	}})
 },["uinfo","user"])
 
 flexbot.addCommand("serverinfo","Info on current server",function(msg,args){
@@ -277,16 +278,57 @@ flexbot.addCommand("serverinfo","Info on current server",function(msg,args){
 		
 		let owner = msg.guild.members.get(msg.guild.ownerID)
 
-		msg.channel.createMessage("",{},{
+		msg.channel.createMessage({embed:{
 			color:0x7289DA,
 
 			author:{
 				name:msg.guild.name,
 				icon_url:"https://cdn.discordapp.com/icons/"+msg.guild.id+"/"+msg.guild.icon+".jpg"
 			},
-			description:"**ID**: "+msg.guild.id+"\n**Owner**: "+owner.username+"#"+owner.discriminator+"\n**Members**: "+msg.guild.memberCount+"\n**Bots**: "+bots+"\n\t"+Math.floor((bots/msg.guild.memberCount)*100)+"% of members\n**Channels**: "+msg.guild.channels.size+"\n**Roles**: "+msg.guild.roles.size+"\n**Emojis**: "+msg.guild.emojis.length+"\n[Icon](https://cdn.discordapp.com/icons/"+msg.guild.id+"/"+msg.guild.icon+".jpg)"
-		})
+			description:"**ID**: "+msg.guild.id+"\n**Owner**: "+owner.username+"#"+owner.discriminator+"\n**Members**: "+msg.guild.memberCount+"\n**Bots**: "+bots+"\n\t"+Math.floor((bots/msg.guild.memberCount)*100)+"% of members\n**Channels**: "+msg.guild.channels.size+"\n**Roles**: "+msg.guild.roles.size+"\n**Emojis**: "+msg.guild.emojis.length+"\n[Icon](https://cdn.discordapp.com/icons/"+msg.guild.id+"/"+msg.guild.icon+".jpg)",
+			image:{
+				url:"https://cdn.discordapp.com/icons/"+msg.guild.id+"/"+msg.guild.icon+".jpg"
+			}
+		}})
 	}else{
 		msg.channel.createMessage("Can't use in PM's")
 	}
 },["sinfo","ginfo","guildinfo"])
+
+flexbot.addCommand("botinfo","Info on a bot",function(msg,args){
+	if(/[0-9]{17,21}/.test(args)){
+		let u = args.match(/[0-9]{17,21}/g)[0];
+		
+		let data;
+	
+		request.get("https://bots.discord.pw/api/bots/"+u,{headers:{"Authorization":flexbot.dbotsapi}},(err,res,body)=>{
+			if(!err && res.statusCode == 200){
+				data = JSON.parse(body);
+		
+		let owners = [];
+		for(let i=0;i<data["owner_ids"].length;i++){
+			let o = flexbot.bot.users.get(data["owner_ids"][i]);
+			owners.push(o.username+"#"+o.discriminator);
+		};
+		
+		let ubot = flexbot.bot.users.get(u);
+		
+		msg.channel.createMessage({embed:{
+			color:0x7289DA,
+
+			author:{
+				name:ubot.username+"#"+ubot.discriminator,
+				icon_url:ubot.avatarURL
+			},
+			description:"**ID**: "+u+"\n**Owner(s)**: "+owners.join(", ")+"\n**Library**: "+data.library+"\n**Prefix**: `"+data.prefix+"`\n\n[Invite]("+data.invite_url+")",
+			footer:{
+				text:"Info provided by Discord Bots API",
+				icon_url:"https://cdn.discordapp.com/icons/110373943822540800/5b72add698c1fa9b51d01c43cdba9542.jpg"
+			}
+		}})
+	}
+	});
+	}else{
+		msg.channel.createMessage("Bot not found, mention or use ID.")
+	}
+},["binfo"])

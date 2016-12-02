@@ -12,6 +12,7 @@
     "async": "^2.1.2",
     "eris": "github:abalabahaha/eris#dev",
     "gm": "^1.23.0",
+    "jimp": "^0.2.27",
     "mathjs": "^3.6.0",
     "mysql": "^",
     "node-emoji": "^1.4.1",
