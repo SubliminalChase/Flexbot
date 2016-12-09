@@ -132,73 +132,6 @@ flexbot.addCommand("emoji","Get an image of an emoji/custom emote.",function(msg
 	}
 },["emote","e"])
 
-flexbot.addCommand("transfer","Send credits to people.",function(msg,args){
-	if(!args){
-		msg.channel.createMessage("No arguments given.")
-	}else if(/[0-9]{17,21}/.test(args)){
-		let a = args.split(",")
-		let u = flexbot.bot.users.get(a[0].match(/[0-9]{17,21}/g)[0])
-		let amt = a[1]
-		if(!amt){
-			msg.channel.createMessage("Missing amount.")
-		}else{
-			if(u.bot){
-				msg.channel.createMessage("Bots cannot use credits.")
-			}else if(u.id == msg.author.id){
-				msg.channel.createMessage("It's useless to send money to yourself.")
-			}else{
-				let hasFunds;
-	flexbot.sql.query("SELECT credits FROM userdata WHERE userid="+msg.author.id,(e,d)=>{
-		if(!e){
-			if(!d[0]){
-				flexbot.sql.query("INSERT INTO userdata VALUES ("+msg.author.id+",0,0,0)")	
-				hasFunds = false;
-			}else{
-				hasFunds = d[0].credits >= parseInt(amt);
-			}
-		}
-	})
-		setTimeout(()=>{
-			if(hasFunds == true){
-				let pin = Math.floor(Math.random()*10)+""+Math.floor(Math.random()*10)+""+Math.floor(Math.random()*10)+""+Math.floor(Math.random()*10);
-
-				flexbot.awaitForMessage(msg,"You're about to send **"+parseInt(amt)+" credits** to **"+u.username+"#"+u.discriminator+"**.\n\nTo confirm, please type `"+pin+"` or `cancel` to cancel.")
-				.then(m=>{
-					if(m.content==pin){
-						let res = msg.channel.createMessage("Sending money...")
-						flexbot.bot.getDMChannel(u.id)
-		.then((c)=>{
-			c.createMessage("**"+msg.author.username+"#"+msg.author.discriminator+"** has transfered you **"+amt+" credits**.")
-			
-		})
-		flexbot.sql.query("SELECT credits FROM userdata WHERE userid="+u.id,(e,d)=>{
-			if(!e){
-				if(!d[0]){
-					flexbot.sql.query("INSERT INTO userdata VALUES ("+u.id+",0,0,0)")
-					flexbot.sql.query("UPDATE userdata SET credits = credits+"+parseInt(amt)+" WHERE userid="+msg.author.id)
-					flexbot.sql.query("UPDATE userdata SET credits = credits-"+parseInt(amt)+" WHERE userid="+msg.author.id)
-				}else{
-					flexbot.sql.query("UPDATE userdata SET credits = credits+"+parseInt(amt)+" WHERE userid="+u.id)
-					flexbot.sql.query("UPDATE userdata SET credits = credits-"+parseInt(amt)+" WHERE userid="+msg.author.id)
-				}
-			}
-			res.then(m=>flexbot.bot.editMessage(msg.channel.id,m.id,"Money sent!\n```diff\n+ "+u.username+"#"+u.discriminator+": +"+parseInt(amt)+" credits\n- "+msg.author.username+"#"+msg.author.discriminator+": -"+parseInt(amt)+" credits\n```"))
-		})
-					}else{
-						msg.channel.createMessage("Canceled transaction.")
-					}
-				})
-			}else{
-				msg.channel.createMessage("Insufficient funds.")
-			}
-			},2000)
-			}
-		}
-	}else{
-		msg.channel.createMessage("User not found. Make sure to use mentions.")
-	}
-})
-
 flexbot.addCommand("servers","A pagenated server list",function(msg,args){
 	let servers = []
 	flexbot.bot.guilds.forEach(s=>{
@@ -250,22 +183,51 @@ flexbot.addCommand("userinfo","Get info about a user",function(msg,args){
 		u = msg.guild ? msg.member : msg.author
 	}
 	
-	let roles = [];
+	let uroles = [];
 	if(msg.guild){
 		msg.guild.members.get(u.id).roles.forEach(r=>{
-			roles.push(msg.guild.roles.get(r).name)
+			uroles.push(msg.guild.roles.get(r))
+		})
+	}
+	uroles.sort((a,b)=>{
+		if(a.position < b.position){
+			return -1;
+		}
+		if(a.position > b.position){
+			return 1;
+		}
+		return 0;
+	});
+	
+	let roles = [];
+	if(msg.guild){
+		uroles.forEach(r=>{
+			roles.push(r.name)
 		})
 	}
 	
+	let col = 0x7289DA;
+	if(msg.guild && msg.guild.members.get(u.id).roles.length > 0){
+		col = uroles[0].color;
+	}
+	
 	msg.channel.createMessage({embed:{
-		color:scolors[u.status],
+		color:col,
 
 		author:{
-			name:u.username+"#"+u.discriminator,
-			icon_url:u.avatarURL
+			name:"User Info: "+u.username+"#"+u.discriminator,
+			icon_url:"https://twemoji.maxcdn.com/36x36/2139.png"
 		},
-		description:"**ID**: "+u.id+"\n**Nick**: "+(u.nick ? u.nick : "")+"\n**Playing**: "+(u.game ? u.game.name : "")+"\n**Roles**: "+roles.join(", ")+"\n[Avatar]("+u.avatarURL+")",
-		image:{
+		//description:"**ID**: "+u.id+"\n**Nick**: "+(u.nick ? u.nick : "")+"\n**Playing**: "+(u.game ? u.game.name : "")+"\n**Roles**: "+roles.join(", ")+"\n\n[Avatar]("+u.avatarURL+")",
+		fields:[
+				{name:"ID",value:u.id,inline:true},
+				{name:"Nickname",value:u.nick ? u.nick : "None",inline:true},
+				{name:"Status",value:statusIcons[u.status]+" "+u.status,inline:true},
+				{name:"Playing",value:u.game ? u.game.name : "Nothing",inline:true},
+				{name:"Roles",value:u.guild ? roles.join(", ") : "Command not used in server.",inline:true},
+				{name:"Avatar",value:"[Full Size]("+u.avatarURL+")",inline:true}
+			],
+		thumbnail:{
 			url:u.avatarURL
 		}
 	}})
@@ -277,16 +239,30 @@ flexbot.addCommand("serverinfo","Info on current server",function(msg,args){
 		msg.guild.members.forEach(m=>{if(m.bot) ++bots;})
 		
 		let owner = msg.guild.members.get(msg.guild.ownerID)
+		let emojis = [];
+		msg.guild.emojis.forEach(e=>{
+			emojis.push("<:"+e.name+":"+e.id+">")
+		})
 
 		msg.channel.createMessage({embed:{
 			color:0x7289DA,
 
 			author:{
-				name:msg.guild.name,
-				icon_url:"https://cdn.discordapp.com/icons/"+msg.guild.id+"/"+msg.guild.icon+".jpg"
+				name:"Server Info: "+msg.guild.name,
+				icon_url:"https://twemoji.maxcdn.com/36x36/2139.png"
 			},
-			description:"**ID**: "+msg.guild.id+"\n**Owner**: "+owner.username+"#"+owner.discriminator+"\n**Members**: "+msg.guild.memberCount+"\n**Bots**: "+bots+"\n\t"+Math.floor((bots/msg.guild.memberCount)*100)+"% of members\n**Channels**: "+msg.guild.channels.size+"\n**Roles**: "+msg.guild.roles.size+"\n**Emojis**: "+msg.guild.emojis.length+"\n[Icon](https://cdn.discordapp.com/icons/"+msg.guild.id+"/"+msg.guild.icon+".jpg)",
-			image:{
+			description:"**Emojis**\n"+emojis.join(","),
+			fields:[
+				{name:"ID",value:msg.guild.id,inline:true},
+				{name:"Owner",value:owner.username+"#"+owner.discriminator,inline:true},
+				{name:"Members",value:msg.guild.memberCount,inline:true},
+				{name:"Bots",value:bots+" ("+Math.floor((bots/msg.guild.memberCount)*100)+"% of members)",inline:true},
+				{name:"Channels",value:msg.guild.channels.size,inline:true},
+				{name:"Roles",value:msg.guild.roles.size,inline:true},
+				{name:"Emojis",value:msg.guild.emojis.length,inline:true},
+				{name:"Icon",value:"[Full Size](https://cdn.discordapp.com/icons/"+msg.guild.id+"/"+msg.guild.icon+".jpg)",inline:true}
+			],
+			thumbnail:{
 				url:"https://cdn.discordapp.com/icons/"+msg.guild.id+"/"+msg.guild.icon+".jpg"
 			}
 		}})
@@ -317,13 +293,23 @@ flexbot.addCommand("botinfo","Info on a bot",function(msg,args){
 			color:0x7289DA,
 
 			author:{
-				name:ubot.username+"#"+ubot.discriminator,
-				icon_url:ubot.avatarURL
+				name:"Bot Info: "+ubot.username+"#"+ubot.discriminator,
+				icon_url:"https://twemoji.maxcdn.com/36x36/2139.png"
 			},
-			description:"**ID**: "+u+"\n**Owner(s)**: "+owners.join(", ")+"\n**Library**: "+data.library+"\n**Prefix**: `"+data.prefix+"`\n\n[Invite]("+data.invite_url+")",
+			description:data.description,
+			fields:[
+				{name:"ID",value:u,inline:true},
+				{name:"Owner(s)",value:owners.join(", "),inline:true},
+				{name:"Library",value:data.library,inline:true},
+				{name:"Prefix",value:"`"+data.prefix+"`",inline:true},
+				{name:"Invite",value:"[Click For Invite]("+data.invite_url+")",inline:true}
+			],
 			footer:{
 				text:"Info provided by Discord Bots API",
 				icon_url:"https://cdn.discordapp.com/icons/110373943822540800/5b72add698c1fa9b51d01c43cdba9542.jpg"
+			},
+			thumbnail:{
+				url:ubot.avatarURL
 			}
 		}})
 	}

@@ -14,63 +14,32 @@ var semoji = [
 	":money_with_wings:"
 ]
 
-flexbot.addCommand("slots","A place to spend your credits.",function(msg,args){
-	args = args ? args : "10"
-	if(parseInt(args) < 10){
-		msg.channel.createMessage("You can only bet above 10 credits.")
-	}else{
-	flexbot.sql.query("SELECT credits FROM userdata WHERE userid="+msg.author.id,(e,d)=>{
-		if(!e){
-			if(!d[0]){
-				flexbot.sql.query("INSERT INTO userdata (id) VALUES ("+msg.author.id+")")	
-				msg.channel.createMessage("You don't have enough credits.")
-			}else{
-				if(d[0].credits >= parseInt(args)){
-					flexbot.sql.query("UPDATE userdata SET credits = credits-"+args+" WHERE userid="+msg.author.id)
-					var res = ":regional_indicator_s:\u200b:regional_indicator_l::regional_indicator_o::regional_indicator_t::regional_indicator_s:\n:black_large_square::white_large_square::black_large_square::white_large_square::black_large_square:"
-					
-					var s = [
-						[],
-						[],
-						[]
-					]
-					for(i=0;i<3;i++){
-						var rnd = Math.floor(Math.random()*semoji.length)
-						s[i] = []
-						s[i][0] = rnd==0 ? semoji[semoji.length-1] : semoji[rnd-1]
-						s[i][1] = semoji[rnd]
-						s[i][2] = rnd==semoji.length-1 ? semoji[0] : semoji[rnd+1]
-					}		
-					res+="\n:white_large_square:"+s[0][0]+s[1][0]+s[2][0]+":white_large_square:"
-					res+="\n:arrow_forward:"+s[0][1]+s[1][1]+s[2][1]+":arrow_backward:"
-					res+="\n:white_large_square:"+s[0][2]+s[1][2]+s[2][2]+":white_large_square:"
-					res+="\n:black_large_square::white_large_square::black_large_square::white_large_square::black_large_square:"
-					res=res.replace("\ufe0f","")
-				if(s[0][1] == s[1][1] == s[2][1]){
-					if(s[0][1] == semoji[4]){
-						res+="\n\nYou have won: "+(500*parseInt(args))
-						flexbot.sql.query("UPDATE userdata SET credits = credits+"+(500*parseInt(args))+" WHERE userid="+msg.author.id)
-					}else if(s[0][1] == semoji[7]){
-						res+="\n\nYou have won: "+(1000*parseInt(args))
-						flexbot.sql.query("UPDATE userdata SET credits = credits+"+(1000*parseInt(args))+" WHERE userid="+msg.author.id)
-					}else if(s[0][1] == semoji[9]){
-						res+="\n\nJackpot! You have won: "+(100000*parseInt(args))
-						flexbot.sql.query("UPDATE userdata SET credits = credits+"+(100000*parseInt(args))+" WHERE userid="+msg.author.id)
-					}else{
-						res+="\n\nYou have won: "+(100*parseInt(args))
-						flexbot.sql.query("UPDATE userdata SET credits = credits+"+(100*parseInt(args))+" WHERE userid="+msg.author.id)
-					}
-				}else{
-					res+="\n\nSorry, you won nothing."
-				}
-					msg.channel.createMessage(emoji.emojify(res))
-				}else{
-					msg.channel.createMessage("You don't have enough credits.")
-				}
-			}
-		}
-	})
+flexbot.addCommand("slots","A slot machine with no reward.",function(msg,args){
+	var res = ":regional_indicator_s:\u200b:regional_indicator_l::regional_indicator_o::regional_indicator_t::regional_indicator_s:\n:black_large_square::white_large_square::black_large_square::white_large_square::black_large_square:"
+
+	var s = [
+		[],
+		[],
+		[]
+	]
+	for(i=0;i<3;i++){
+		var rnd = Math.floor(Math.random()*semoji.length)
+		s[i] = []
+		s[i][0] = rnd==0 ? semoji[semoji.length-1] : semoji[rnd-1]
+		s[i][1] = semoji[rnd]
+		s[i][2] = rnd==semoji.length-1 ? semoji[0] : semoji[rnd+1]
 	}
+	res+="\n:white_large_square:"+s[0][0]+s[1][0]+s[2][0]+":white_large_square:"
+	res+="\n:arrow_forward:"+s[0][1]+s[1][1]+s[2][1]+":arrow_backward:"
+	res+="\n:white_large_square:"+s[0][2]+s[1][2]+s[2][2]+":white_large_square:"
+	res+="\n:black_large_square::white_large_square::black_large_square::white_large_square::black_large_square:"
+	res=res.replace("\ufe0f","")
+	if(s[0][1] == s[1][1] && s[1][1] == s[2][1]){
+		res+="\n\nYou won!"
+	}else{
+		res+="\n\nSorry, you lost."
+	}
+	msg.channel.createMessage(emoji.emojify(res))
 })
 
 flexbot.addCommand("blackjack","Play a hand of Blackjack with the bot",function(msg,args){
@@ -80,35 +49,35 @@ flexbot.addCommand("blackjack","Play a hand of Blackjack with the bot",function(
 		"\u2660",
 		"\u2663"
 	];
-	
+
 	let face = ["J","Q","K"]
-	
+
 	let dealer = [];
 	let player = [];
-	
+
 	let d_num = [];
 	let p_num = [];
-	
+
 	let suit;
 	let rng;
 	let card1 = "";
 	let card2 = "";
 	let d_total;
 	let p_total;
-	
+
 	suit = Math.floor(Math.random() * 4);
 	rng = Math.floor(Math.random() * 10)+1;
 	d_num.push(rng);
 	card1 = suits[suit]+""+(rng == 1 ? "A" : rng == 10 ? face[Math.floor(Math.random() * 3)] : parseInt(rng));
-	
+
 	suit = Math.floor(Math.random() * 4);
 	rng = Math.floor(Math.random() * 10)+1;
 	p_num.push(rng);
 	card2 = suits[suit]+""+(rng == 1 ? "A" : rng == 10 ? face[Math.floor(Math.random() * 3)] : parseInt(rng));
-	
+
 	dealer.push(card1);
 	player.push(card2);
-	
+
 	msg.channel.createMessage({
 		content:"Dealer deals a card to each of you.",
 		embed:{
@@ -130,26 +99,26 @@ flexbot.addCommand("blackjack","Play a hand of Blackjack with the bot",function(
 			rng = Math.floor(Math.random() * 10)+1;
 			d_num.push(rng);
 			card1 = suits[suit]+""+(rng == 1 ? "A" : rng == 10 ? face[Math.floor(Math.random() * 3)] : parseInt(rng));
-	
+
 			suit = Math.floor(Math.random() * 4);
 			rng = Math.floor(Math.random() * 10)+1;
 			p_num.push(rng);
 			card2 = suits[suit]+""+(rng == 1 ? "A" : rng == 10 ? face[Math.floor(Math.random() * 3)] : parseInt(rng));
-	
+
 			dealer.push(card1);
 			player.push(card2);
-			
+
 			d_total = 0;
 			p_total = 0;
-			
+
 			for(let i = 0;i<d_num.length;i++){
 				d_total += d_num[i];
 			};
-			
+
 			for(let i = 0;i<p_num.length;i++){
 				p_total += p_num[i];
 			};
-			
+
 			msg.channel.createMessage({
 				content:"Dealer deals a card to each of you.",
 				embed:{
@@ -179,26 +148,26 @@ flexbot.addCommand("blackjack","Play a hand of Blackjack with the bot",function(
 				}
 				msg.channel.createMessage(out);
 			});
-	
+
 		}else if(m.content.toLowerCase() == "fold"){
 			suit = Math.floor(Math.random() * 4);
 			rng = Math.floor(Math.random() * 10)+1;
 			d_num.push(rng);
 			card1 = suits[suit]+""+(rng == 1 ? "A" : rng == 10 ? face[Math.floor(Math.random() * 3)] : parseInt(rng));
-	
+
 			dealer.push(card1);
-			
+
 			d_total = 0;
 			p_total = 0;
-			
+
 			for(let i = 0;i<d_num.length;i++){
 				d_total += d_num[i];
 			};
-			
+
 			for(let i = 0;i<p_num.length;i++){
 				p_total += p_num[i];
 			};
-			
+
 			msg.channel.createMessage({
 				content:"Player folds, dealer draws a card for themself.",
 				embed:{

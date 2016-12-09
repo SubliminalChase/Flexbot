@@ -13,11 +13,7 @@ var util = require("util");
 var fs = require("fs");
 var path = require("path");
 var emoji = require("node-emoji");
-var mysql = require("mysql");
 var reload = require("require-reload")(require);
-
-flexbot.sql =  mysql.createConnection(config.mysql);
-flexbot.sql.connect();
 
 var bot = flexbot.bot
 bot.on("ready", () => {
@@ -78,38 +74,59 @@ var cmds = {
 	help:{
 		name:"help",
 		desc:"Lists commands",
+		args:"<cmd>",
 		func: function(msg,args){
-			bot.createMessage(msg.channel.id,emoji.get(":envelope_with_arrow:")+" Sending via DM.")
-			
-			var res = "__**Avaliable Commands**__"
+		if(msg.guild){
+		bot.createMessage(msg.channel.id,emoji.get(":envelope_with_arrow:")+" Sending via DM.");
+		}
+		
+		let content = {embed:{
+			author:{
+				name:"FlexBot Help",
+				icon_url:bot.user.avatarURL
+			},
+			color:0xff8000
+		}};
+		if(args){
+			let c;
+			for(i in flexbot.cmds){
+				if(flexbot.cmds[i].name == args){
+					c = flexbot.cmds[i];
+				}
+			}
+			if(c){
+				content.embed.author.name += " - "+c.name;
+				content.embed.fields = [
+					{name:"Info",value:"**Name**: "+c.name+"\n**Description**: "+c.desc+"\n**Arguments**: "+c.args+"\n**Aliases**: "+(c.aliases ? c.aliases.join(", ") : "none")},
+					{name:"Usage:",value:flexbot.prefix2+c.name+" "+c.args}
+				];
+			}else{
+				content = "Command not found.";
+			}
+		}else{
 			var sorted = {}
 			Object.keys(cmds).sort().forEach(k => { sorted[k] = cmds[k] })
 			
+			let i = 0
+			let res = []
 			for(item in sorted){
 				var c = cmds[item]
-				res += "\n\t\u2022 **"+c.name+"** - "+c.desc
-				if(c.aliases.length>0){
-					res+="\n\t\tAliases: "
-					for(n in c.aliases){
-						res+=c.aliases[n]+(n==c.aliases.length-1 ? "" : ", ")
-					}
-				}
+				i++
+				res.push(c.name)
 			}
+			content = {content:"Do `f!help <command>` for in-depth help.\n\n**Prefixes**: `"+flexbot.prefix+", "+flexbot.prefix2+", @"+bot.user.username+"`\n\n[] arguments = required, <> = optional\n\n**Commands**:\n```\n"+res.join(", ")+"```"};
+		}
 			
 			bot.getDMChannel(msg.author.id).then((c)=>{
-			if(res.length > 2000){
-				c.createMessage(res.substring(0,2000))
-				c.createMessage(res.substring(2000,res.length))
-			}else{
-				c.createMessage(res)
-			}
+				c.createMessage(content)
 			})
 		},
-		aliases:["cmds","commands"]
+		aliases:[]
 	},
 	ping:{
 		name:"ping",
 		desc:"Pong.",
+		args:"",
 		func: function(msg,args){
 			bot.createMessage(msg.channel.id,"Pong.").then((m)=>{
 				bot.editMessage(msg.channel.id,m.id,"Pong, took "+Math.floor(m.timestamp-msg.timestamp)+"ms.")
@@ -120,6 +137,7 @@ var cmds = {
 	restart:{
 		name:"restart",
 		desc:"Restarts the bot, duh",
+		args:"",
 		func: function(msg,args){
 			if(isOwner(msg)){
 				bot.createMessage(msg.channel.id,emoji.get(":arrows_counterclockwise:")+" Restarting FlexBot.")
@@ -134,6 +152,7 @@ var cmds = {
 	eval:{
 		name:"eval",
 		desc:"Do I need to say?",
+		args:"[string]",
 		func: function(msg,args){
 			if(isOwner(msg)){
 				try{
@@ -150,6 +169,7 @@ var cmds = {
 	unload:{
 		name:"unload",
 		desc:"Unloads commands",
+		args:"[name]",
 		func: function(msg,args){
 			if(isOwner(msg)){
 				delete cmds[args]
@@ -163,11 +183,15 @@ var cmds = {
 	load:{
 		name:"load",
 		desc:"Loads a command/module file.",
+		args:"[name]",
 		func: function(msg,args){
 			if(isOwner(msg)){
 				if(fs.existsSync(path.join(__dirname,"modules",args))){
-					reload(path.join(__dirname,"modules",args))
+	try{				reload(path.join(__dirname,"modules",args))
 						bot.createMessage(msg.channel.id,emoji.get(":ok_hand:"))
+	}catch(e){
+		bot.createMessage(msg.channel.id,emoji.get(":warning:")+" Error:\n```js\n"+e+"```")
+	}
 				}else if(fs.existsSync(path.join(__dirname,"modules",args+".js"))){
 					reload(path.join(__dirname,"modules",args+".js"))
 						bot.createMessage(msg.channel.id,emoji.get(":ok_hand:"))
@@ -183,8 +207,8 @@ var cmds = {
 };
 flexbot.cmds = cmds;
 
-function addCommand(name,desc,func,aliases=[]){
-	flexbot.cmds[name] = {name:name,desc:desc,func:func,aliases:aliases}
+function addCommand(name,desc,func,aliases=[],args=""){
+	flexbot.cmds[name] = {name:name,desc:desc,func:func,aliases:aliases,args:args}
 }
 flexbot.addCommand = addCommand;
 
@@ -292,10 +316,6 @@ bot.on("messageCreate",(msg) => {
 });
 
 bot.on("guildCreate",s=>{
-	flexbot.sql.query("SELECT * FROM serverconfig WHERE id="+s.id,(e,d)=>{
-			if(!e){
-				if(!d[0]){
-					flexbot.sql.query("INSERT INTO serverconfig (id) VALUES ("+s.id+")")
 		let bots = 0
 		s.members.forEach(m=>{if(m.bot) ++bots;})
 			bot.createMessage(logid,{embed:{
@@ -311,18 +331,11 @@ bot.on("guildCreate",s=>{
 				},
 				timestamp:new Date()
 			}})
-			
-			s.defaultChannel.createMessage("Hello, I am FlexBot, a multipurpose bot written by **Flex#5917**. My prefixes are `"+flexbot.prefix+"` and `"+flexbot.prefix2+"` or you can mention me. Here are a few things I can do:\n\t- Moderation logging\n\t- Leveling and credit system\n\t- Various info and utility commands\n\t- NSFW Commands\n\nIf you feel like you need something you can leave a suggestion with the `suggest` command. For more info and support, see the `info` command.")
-	}
-	}
-	})
 	
 	request.post("https://bots.discord.pw/api/bots/"+bot.user.id+"/stats",{headers:{"Authorization":config.dbotsapi},json:{server_count:bot.guilds.size}});
 })
 
 bot.on("guildDelete",s=>{
-	flexbot.sql.query("DELETE FROM serverconfig WHERE id="+s.id)
-
 	bot.createMessage(logid,{embed:{
 		author:{
 			name:"Left Server:",

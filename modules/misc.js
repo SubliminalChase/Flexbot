@@ -3,12 +3,12 @@ var emoji = require("node-emoji")
 
 flexbot.addCommand("echo","Echo, echo, echo",function(msg,args){
 	msg.channel.createMessage("\u200b"+args)
-},["say"])
+},["say"],"[string]")
 
 flexbot.addCommand("status","Sets bots status",function(msg,args){
 	flexbot.bot.editStatus("online",{name:args})
 	msg.channel.createMessage("Set status.")
-})
+},[],"[string]")
 
 flexbot.addCommand("avatar","Get an avatar of someone",function(msg,args){
 	var request = require('request').defaults({encoding:null});
@@ -23,7 +23,7 @@ flexbot.addCommand("avatar","Get an avatar of someone",function(msg,args){
 				msg.channel.createMessage(`Avatar for **${u.username}#${u.discriminator}**:`,{name:"avatar.png",file:new Buffer(body)})
 			}
 		})
-})
+},[],"[user]")
 
 flexbot.addCommand("roll","Roll dice",function(msg,args){
 	msg.channel.createMessage("Rolling...")
@@ -57,7 +57,7 @@ flexbot.addCommand("info","It's like a business card in a message",function(msg,
 			name:"A bot written by Flex#5917",
 			icon_url:"https://flexbox.xyz/assets/img/Avatar9.png"
 		},
-		description:"**Language**: Javascript\n**Library**: Eris\n\n[GitHub](https://github.com/LUModder/FlexBot) | [Invite](https://flexbox.xyz/flexbot/invite) | [Server](https://flexbox.xyz/discord)"
+		description:"**Language**: Javascript\n**Library**: Eris\n\n[GitHub](https://github.com/LUModder/FlexBot) | [Invite](https://discordapp.com/oauth2/authorize?client_id=173441062243663872&scope=bot&permissions=0) | [Server](https://discord.gg/ZcXh4ek)"
 	}})
 },["about"])
 
@@ -86,17 +86,25 @@ flexbot.addCommand("stats","Oooh, numbers",function(msg,args){
 })
 
 flexbot.addCommand("invite","Invite FlexBot to your server!",function(msg,args){
-	msg.channel.createMessage({embed:{
-		color:0xEB0763,
-		author:{
-			name:"Thank You!",
-			icon_url:"https://twemoji.maxcdn.com/36x36/1f49a.png"
-		},
-		description:"Thank you for being interested in me and I hope you enjoy using me!\n\n(Please note, if you're planning to invite me to a bot collection server, I will leave)\n\n[Invite Link](https://flexbox.xyz/flexbot)"
-	}})
+	msg.channel.createMessage("Invite me with this link: https://discordapp.com/oauth2/authorize?client_id=173441062243663872&scope=bot&permissions=0")
 })
 
 flexbot.addCommand("calc","Do maths",function(msg,args){
 	let math = require("mathjs");
 	msg.channel.createMessage("Result: "+math.eval(args));
-},["math"])
+},["math"],"[math stuffs]")
+
+flexbot.addCommand("ship","Ship two users.",function(msg,args){
+	let a = args.split(",")
+	if(/[0-9]{17,21}/.test(a[0]) && !a[1]){
+		let u = flexbot.bot.users.get(args.match(/[0-9]{17,21}/g)[0])
+		msg.channel.createMessage(emoji.get(":heart:")+" **"+msg.author.username+"** ships themself with **"+u.username+"** ("+(Math.floor(Math.random()*100)+1)+"% compatibility)")
+	}else if(/[0-9]{17,21}/.test(a[0]) && /[0-9]{17,21}/.test(a[1])){
+		let u1 = flexbot.bot.users.get(args.match(/[0-9]{17,21}/g)[0])
+		let u2 = flexbot.bot.users.get(args.match(/[0-9]{17,21}/g)[1])
+		
+		msg.channel.createMessage(emoji.get(":heart:")+" **"+msg.author.username+"** ships **"+u1.username+"** with **"+u2.username+"** ("+(Math.floor(Math.random()*100)+1)+"% compatibility)")
+	}else{
+		msg.channel.createMessage("User not found.")
+	}
+},[],"[user1],<user2>")

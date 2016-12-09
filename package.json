@@ -4,17 +4,15 @@
   "description": "Discord bot",
   "main": "bot.js",
   "scripts": {
-    "test": "node bot.js"
+    "start": "node bot.js"
   },
   "author": "Flex",
   "license": "N/A",
   "dependencies": {
     "async": "^2.1.2",
     "eris": "github:abalabahaha/eris#dev",
-    "gm": "^1.23.0",
     "jimp": "^0.2.27",
     "mathjs": "^3.6.0",
-    "mysql": "^",
     "node-emoji": "^1.4.1",
     "request": "^2.76.0",
     "require-reload": "^0.2.2",
