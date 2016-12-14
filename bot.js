@@ -20,7 +20,7 @@ bot.on("ready", () => {
 	console.log("Loaded FlexBot");
 
 	request.post("https://bots.discord.pw/api/bots/"+bot.user.id+"/stats",{headers:{"Authorization":config.dbotsapi},json:{server_count:bot.guilds.size}});
-	
+
 	bot.getDMChannel(config.ownerid)
 		.then((c)=>{
 			bot.createMessage(c.id,emoji.get(":white_check_mark:")+" Loaded FlexBot")
@@ -40,14 +40,23 @@ flexbot.logid = logid;
 function logCommand(cmd,msg,args){
 	bot.createMessage(logid,{embed:{
 		author:{
-			name:"Command Log",
-			icon_url:"http://www.famfamfam.com/lab/icons/silk/icons/application_xp_terminal.png"
+			name:msg.author.username+"#"+msg.author.discriminator,
+			icon_url:msg.author.avatarURL
 		},
 		color:0xdf8000,
-		description:"Command: "+cmd+"\nArgs: "+args+"\nUser: "+msg.author.username+"#"+msg.author.discriminator,
+		fields:[
+			{name:"Command",value:cmd,inline:true},
+			{name:"Arguments",value:args ? args : "none",inline:true},
+			{name:"User ID",value:""+msg.author.id,inline:true},
+			{name:msg.guild ? msg.guild.name : "Private Message",value:msg.guild ? ""+msg.guild.id : ""+msg.author.id,inline:true},
+			{name:msg.channel.name ? "#"+msg.channel.name : msg.author.username,value:""+msg.channel.id,inline:true}
+		],
 		footer:{
-			text:msg.guild ? "#"+msg.channel.name+" on "+msg.guild.name : "Private Message",
-			icon_url:msg.guild ? "https://cdn.discordapp.com/icons/"+msg.guild.id+"/"+msg.guild.icon+".jpg" : "http://www.famfamfam.com/lab/icons/silk/icons/user_comment.png"
+			text:"Time",
+			icon_url:"https://raw.githubusercontent.com/twitter/twemoji/gh-pages/36x36/1f552.png"
+		},
+		thumbnail:{
+			url:msg.guild ? "https://cdn.discordapp.com/icons/"+msg.guild.id+"/"+msg.guild.icon+".jpg" : "http://www.famfamfam.com/lab/icons/silk/icons/user_comment.png"
 		},
 		timestamp:new Date()
 	}})
@@ -79,7 +88,7 @@ var cmds = {
 		if(msg.guild){
 		bot.createMessage(msg.channel.id,emoji.get(":envelope_with_arrow:")+" Sending via DM.");
 		}
-		
+
 		let content = {embed:{
 			author:{
 				name:"FlexBot Help",
@@ -89,7 +98,7 @@ var cmds = {
 		}};
 		if(args){
 			let c;
-			for(i in flexbot.cmds){
+			for(let i in flexbot.cmds){
 				if(flexbot.cmds[i].name == args){
 					c = flexbot.cmds[i];
 				}
@@ -97,8 +106,10 @@ var cmds = {
 			if(c){
 				content.embed.author.name += " - "+c.name;
 				content.embed.fields = [
-					{name:"Info",value:"**Name**: "+c.name+"\n**Description**: "+c.desc+"\n**Arguments**: "+c.args+"\n**Aliases**: "+(c.aliases ? c.aliases.join(", ") : "none")},
-					{name:"Usage:",value:flexbot.prefix2+c.name+" "+c.args}
+					{name:"Name",value:c.name,inline:true},
+					{name:"Description",value:c.desc,inline:true},
+					{name:"Arguments",value:c.args,inline:true},
+					{name:"Aliases",value:(c.aliases ? c.aliases.join(", ") : "none"),inline:true},
 				];
 			}else{
 				content = "Command not found.";
@@ -106,7 +117,7 @@ var cmds = {
 		}else{
 			var sorted = {}
 			Object.keys(cmds).sort().forEach(k => { sorted[k] = cmds[k] })
-			
+
 			let i = 0
 			let res = []
 			for(item in sorted){
@@ -116,7 +127,7 @@ var cmds = {
 			}
 			content = {content:"Do `f!help <command>` for in-depth help.\n\n**Prefixes**: `"+flexbot.prefix+", "+flexbot.prefix2+", @"+bot.user.username+"`\n\n[] arguments = required, <> = optional\n\n**Commands**:\n```\n"+res.join(", ")+"```"};
 		}
-			
+
 			bot.getDMChannel(msg.author.id).then((c)=>{
 				c.createMessage(content)
 			})
@@ -235,9 +246,9 @@ flexbot.awaitForMessage = function(msg,display,callback,timeout) {
 		time:msg.timestamp,
 		botmsg:dispMsg
 	}
-	
+
 	let func;
-	
+
 	function regEvent() {
 		return new Promise((resolve,reject)=>{
 			func = function(msg2){
@@ -255,7 +266,7 @@ flexbot.awaitForMessage = function(msg,display,callback,timeout) {
 				}
 			}
 			bot.on("messageCreate",func);
-			
+
 			flexbot.awaitMsgs[msg.channel.id][msg.author.id].timer = setTimeout(()=>{
 				bot.removeListener("messageCreate",func)
 				msg.channel.createMessage("Query canceled.");
@@ -263,10 +274,61 @@ flexbot.awaitForMessage = function(msg,display,callback,timeout) {
 			},timeout);
 		});
 	}
-	
+
 	return regEvent();
 }
 
+flexbot.lookupUser = function(msg,str){
+	return new Promise((resolve,reject)=>{
+		if(/[0-9]{17,21}/.test(str)){
+			resolve(bot.requestHandler.request("GET","/users/"+str.match(/[0-9]{17,21}/)[0],true))
+		}
+
+		let userpool = [];
+		if(msg.guild){
+			msg.guild.members.forEach(m=>{
+				if(m.username.toLowerCase().indexOf(str.toLowerCase()) > -1){
+					userpool.push(m);
+				}
+			});
+		}else{
+			bot.members.forEach(m=>{
+				if(m.username.toLowerCase().indexOf(str.toLowerCase()) > -1){
+					userpool.push(m);
+				}
+			});
+		}
+
+		if(userpool.length > 0){
+			if(userpool.length > 1){
+				let a = [];
+				let u = 0;
+				for(let i=0;i<(userpool.length > 50 ? 50 : userpool.length);i++){
+					a.push(i+". "+userpool[i].username+"#"+userpool[i].discriminator)
+				}
+				flexbot.awaitForMessage(msg,"Multiple users found. Please pick from this list. \n```md\n"+a.join("\n")+"\n# Type `c` to cancel```",(m)=>{
+					let value = parseInt(m.content)
+					if(m.content == "c"){
+						msg.channel.createMessage("Canceled.")
+						reject("Canceled.")
+					}else if(m.content == value){
+						resolve(userpool[value])
+					}
+					clearTimeout(flexbot.awaitMsgs[msg.channel.id][msg.author.id].timer);
+				},30000).then(r=>{
+					resolve(r)
+				});
+			}else{
+				resolve(userpool[0])
+			}
+		}else{
+			if(!/[0-9]{17,21}/.test(str)){
+				msg.channel.createMessage("No users found.")
+				reject("No results.")
+			}
+		}
+	});
+}
 
 var files = fs.readdirSync(path.join(__dirname,"modules"))
 for(f of files){
@@ -283,7 +345,7 @@ bot.on("messageCreate",(msg) => {
 		var args = c.splice((msg.content.substring(0,prefix3.length) == prefix3 ? 2 : 1),c.length).join(" ")
 		var cmd = c[0]
 		if(msg.content.substring(0,prefix3.length) == prefix3) cmd=c.splice(0,2).join(" ");
-		
+
 		for(item in cmds){
 			if(cmds[item].aliases.length > 0){
 				for(n in cmds[item].aliases){
@@ -307,16 +369,17 @@ bot.on("messageCreate",(msg) => {
 					}
 				}
 		}
-		
-		if(isOwner(msg) && msg.content == prefix+"incaseofemergency"){	
+
+		if(isOwner(msg) && msg.content == prefix+"incaseofemergency"){
 			bot.createMessage(msg.channel.id,emoji.get(":ok_hand:"))
 			setTimeout(process.exit,1000)
 		}
 	}
 });
 
-bot.on("guildCreate",s=>{
-		let bots = 0
+bot.on("guildCreate",async function(s){
+		let bots = 0;
+		let inv = (await s.defaultChannel.createInvite()).code
 		s.members.forEach(m=>{if(m.bot) ++bots;})
 			bot.createMessage(logid,{embed:{
 				author:{
@@ -324,14 +387,19 @@ bot.on("guildCreate",s=>{
 					icon_url:"http://www.famfamfam.com/lab/icons/silk/icons/server_add.png"
 				},
 				color:0x42B581,
-				description:"**Owner**: "+s.members.get(s.ownerID).username+"#"+s.members.get(s.ownerID).discriminator+"\n**Members**: "+s.memberCount+"\n**Bots**: "+bots+" ("+Math.floor((bots/s.memberCount)*100)+"%)",
+				fields:[
+					{name:"Owner",value:s.members.get(s.ownerID).username+"#"+s.members.get(s.ownerID).discriminator,inline:true},
+					{name:"Members",value:s.memberCount,inline:true},
+					{name:"Bots",value:bots+" ("+Math.floor((bots/s.memberCount)*100)+"%)",inline:true},
+					{name:"Invite",value:"["+emoji.get(":inbox_tray:")+"](https://discord.gg/"+inv+")",inline:true}
+				],
 				footer:{
 					text:"Time",
 					icon_url:"http://www.famfamfam.com/lab/icons/silk/icons/time.png"
 				},
 				timestamp:new Date()
 			}})
-	
+
 	request.post("https://bots.discord.pw/api/bots/"+bot.user.id+"/stats",{headers:{"Authorization":config.dbotsapi},json:{server_count:bot.guilds.size}});
 })
 
@@ -349,7 +417,7 @@ bot.on("guildDelete",s=>{
 		timestamp:new Date(),
 		color:0xF04946
 	}})
-	
+
 	request.post("https://bots.discord.pw/api/bots/"+bot.user.id+"/stats",{headers:{"Authorization":config.dbotsapi},json:{server_count:bot.guilds.size}});
 })
 

@@ -20,7 +20,10 @@ flexbot.addCommand("e621","[NSFW] Gets an image from e621.",function(msg,args){
 				
 				msg.channel.createMessage({embed:{
 					color:0x000080,
-					description:"**Author**: "+post.author+"\n**Score**: "+post.score+"\n**Rating**: "+post.rating+"\n**Tags**: \n```"+post.tags+"```\n\n[Full Sized]("+post.file_url+")",
+					description:"**Author**: "+post.author+"\n**Score**: "+post.score+"\n**Rating**: "+post.rating+"\n**Tags**: \n```"+post.tags+"```",
+					fields:[
+						{name:"Image",value:"[Full Sized]("+encodeURI(post.file_url)+")"}
+					],
 					image:{
 						url:post.sample_url
 					}
@@ -36,7 +39,7 @@ flexbot.addCommand("e621","[NSFW] Gets an image from e621.",function(msg,args){
 })
 
 flexbot.addCommand("gelbooru","[NSFW] Gets an image from Gelbooru.",function(msg,args){
-	if(!msg.guild || msg.channel.name.search("nsfw") > -1 || msg.channel.topic.indexOf("[nsfw]") > -1){
+	if(!msg.guild || msg.channel.name.search("nsfw") > -1 || msg.channel.topic.toLowerCase().indexOf("[nsfw]") > -1){
 		let tags = [];
 		if(args) tags = JSON.parse(JSON.stringify(args.split(" ")));
 		
@@ -52,7 +55,10 @@ flexbot.addCommand("gelbooru","[NSFW] Gets an image from Gelbooru.",function(msg
 					let post = data.posts.post[Math.floor(Math.random()*data.posts.post.length)].$
 					msg.channel.createMessage({embed:{
 						color:0x0080FF,
-						description:"**Score**: "+post.score+"\n**Rating**: "+post.rating+"\n**Tags**: \n```"+post.tags+"```\n\n[Full Sized]("+post.file_url+")",
+						description:"**Score**: "+post.score+"\n**Rating**: "+post.rating+"\n**Tags**: \n```"+post.tags+"```",
+						fields:[
+							{name:"Image",value:"[Full Sized]("+encodeURI(post.file_url)+")"}
+						],
 						image:{
 							url:post.sample_url
 						}
@@ -68,7 +74,7 @@ flexbot.addCommand("gelbooru","[NSFW] Gets an image from Gelbooru.",function(msg
 },["gb","gel"])
 
 flexbot.addCommand("rule34","[NSFW] Gets an image from Rule 34.",function(msg,args){
-	if(!msg.guild || msg.channel.name.search("nsfw") > -1 || msg.channel.topic.indexOf("[nsfw]") > -1){
+	if(!msg.guild || msg.channel.name.search("nsfw") > -1 || msg.channel.topic.toLowerCase().indexOf("[nsfw]") > -1){
 		let tags = [];
 		if(args) tags = JSON.parse(JSON.stringify(args.split(" ")));
 		
@@ -84,7 +90,10 @@ flexbot.addCommand("rule34","[NSFW] Gets an image from Rule 34.",function(msg,ar
 				let post = data.posts.post[Math.floor(Math.random()*data.posts.post.length)].$
 				msg.channel.createMessage({embed:{
 					color:0xAAE5A3,
-					description:"**Score**: "+post.score+"\n**Rating**: "+post.rating+"\n**Tags**: \n```"+post.tags+"```\n\n[Full Sized]("+post.file_url+")",
+					description:"**Score**: "+post.score+"\n**Rating**: "+post.rating+"\n**Tags**: \n```"+post.tags+"```",
+					fields:[
+						{name:"Image",value:"[Full Sized]("+encodeURI(post.file_url)+")"}
+					],
 					image:{
 						url:"http:"+post.sample_url
 					}

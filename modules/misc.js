@@ -10,15 +10,15 @@ flexbot.addCommand("status","Sets bots status",function(msg,args){
 	msg.channel.createMessage("Set status.")
 },[],"[string]")
 
-flexbot.addCommand("avatar","Get an avatar of someone",function(msg,args){
+flexbot.addCommand("avatar","Get an avatar of someone",async function(msg,args){
 	var request = require('request').defaults({encoding:null});
 		let u;
 		if(/[0-9]{17,21}/.test(args)){
-			u = flexbot.bot.users.get(args.match(/[0-9]{17,21}/g)[0])
+			u = (await flexbot.bot.requestHandler.request("GET","/users/"+args.match(/[0-9]{17,21}/)[0],true))
 		}else{
 			u = msg.author
 		}
-		request.get(u.avatarURL,function(e,res,body){
+		request.get("https://cdn.discordapp.com/avatars/"+u.id+"/"+u.avatar+".jpg",function(e,res,body){
 			if(!e && res.statusCode == 200){
 				msg.channel.createMessage(`Avatar for **${u.username}#${u.discriminator}**:`,{name:"avatar.png",file:new Buffer(body)})
 			}
@@ -108,3 +108,45 @@ flexbot.addCommand("ship","Ship two users.",function(msg,args){
 		msg.channel.createMessage("User not found.")
 	}
 },[],"[user1],<user2>")
+
+flexbot.addCommand("cat","The typical picture of a cat command",function(msg,args){
+	let request = require("request");
+	request.get("http://random.cat/meow",function(e,res,body){
+		let img = JSON.parse(body).file;
+		msg.channel.createMessage({
+			content:"meow, have a cat",
+			embed:{
+				color:Math.floor(Math.random()*16777216),
+				image:{
+					url:img
+				},
+				footer:{
+					text:"Image provided by random.cat"
+				}
+			}
+		});
+	});
+})
+
+flexbot.addCommand("dog","The typical picture of a dog command",function(msg,args){
+	let request = require("request");
+	request.get("http://random.dog/woof",function(e,res,body){
+		if(!e && res.statusCode == 200){
+			let img = "http://random.dog/"+body;
+			msg.channel.createMessage({
+				content:"borf, have a mutt",
+				embed:{
+					color:Math.floor(Math.random()*16777216),
+					image:{
+						url:img
+					},
+					footer:{
+						text:"Image provided by random.dog"
+					}
+				}
+			});
+		}else{
+			msg.channel.createMessage("An error occured, try again later.\n\n```\n"+e+"```")
+		}
+	});
+})

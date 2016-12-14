@@ -34,7 +34,7 @@ var statusIcons = {
 flexbot.addCommand("mods","Moderator list",function(msg,args){
 	if(!args){
 		var res = "Moderators for **"+msg.guild.name+"**:"
-		
+
 		var a = {
 			online:"",
 			idle:"",
@@ -47,7 +47,7 @@ flexbot.addCommand("mods","Moderator list",function(msg,args){
 				a[u.status]+="\n"+statusIcons[u.status]+ u.username+"#"+u.discriminator
 			}
 		})
-		
+
 		for(s in a){
 			res+=a[s]
 		}
@@ -94,38 +94,44 @@ flexbot.addCommand("uptime","Contest of \"how long can we go without a restart\"
 	var m = parseInt(s/60)
 	s=s%60
 	s=parseInt(s)
-	
+
 	var tstr = (h < 10 ? "0"+h : h)+":"+(m < 10 ? "0"+m : m)+":"+(s < 10 ? "0"+s : s)
 	msg.channel.createMessage(emoji.get(":clock3:")+"**Uptime**: "+tstr)
 })
 
 flexbot.addCommand("emoji","Get an image of an emoji/custom emote.",function(msg,args){
-	var request = require('request').defaults({encoding:null});
-	if(args.match(/\d+/)){
-		var eid = args.match(/\d+/)
-		var ecode = args.replace("<","\\<").replace(">","\\>")
-		request.get("https://cdn.discordapp.com/emojis/"+eid+".png",function(e,res,body){
-			if(!e && res.statusCode == 200){
-				msg.channel.createMessage("Emote code: "+ecode,{name:"emoji.png",file:new Buffer(body)})
+	if(/\d+/.test(args)){
+		let eid = args.match(/\d+/g)[0]
+		let ecode = args.replace("<","\\<").replace(">","\\>")
+
+		msg.channel.createMessage({embed:{
+			title:args.replace("<","").replace(">","").replace(eid,""),
+			color:0x7289DA,
+			fields:[
+				{name:"ID",value:""+eid,inline:true},
+				{name:"Code",value:ecode,inline:true},
+				{name:"Image",value:"[Full Size](https://cdn.discordapp.com/emojis/"+eid+".png)"}
+			],
+			thumbnail:{
+				url:"https://cdn.discordapp.com/emojis/"+eid+".png"
 			}
-		})
+		}})
 	}else if(args){
 		if(emoji.which(args)){
-		var s2p = require("svg2png")
-		var twemoji = require("twemoji")
-		let a = args.split(",")
-		let size = a[1] ? parseInt(a[1]) : 1024;
-		let ehex = twemoji.convert.toCodePoint(a[0])
-		let baseurl = "https://raw.githubusercontent.com/twitter/twemoji/gh-pages/svg/"
-		
-		request.get(baseurl+ehex+".svg",function(e,res,body){
-			if(!e && res.statusCode == 200){
-				s2p(new Buffer(body),{width:size,height:size})
-				.then((b)=>{
-					msg.channel.createMessage("Emoji Hex: "+ehex+"\nEmoji code: "+emoji.which(args).replace("_","\\_"),{name:"emoji.png",file:b})
-				})
-			}
-		})
+			let twemoji = require("twemoji")
+			let ehex = twemoji.convert.toCodePoint(args)
+			let baseurl = "https://raw.githubusercontent.com/twitter/twemoji/gh-pages"
+
+			msg.channel.createMessage({embed:{
+				title:emoji.which(args),
+				fields:[
+					{name:"Hex Code",value:ehex},
+					{name:"Image",value:"[SVG]("+baseurl+"/svg/"+ehex+".svg) | [36x36]("+baseurl+"/36x36/"+ehex+".png) | [72x72]("+baseurl+"/72x72/"+ehex+".png)"}
+				],
+				thumbnail:{
+					url:baseurl+"/72x72/"+ehex+".png"
+				}
+			}})
 		}else{
 			msg.channel.createMessage("Emoji not found.")
 		}
@@ -176,145 +182,148 @@ var scolors = {
 }
 
 flexbot.addCommand("userinfo","Get info about a user",function(msg,args){
-	let u;
-	if(/[0-9]{17,21}/.test(args)){
-		u = msg.guild ? msg.guild.members.get(args.match(/[0-9]{17,21}/g)[0]) : flexbot.bot.users.get(args.match(/[0-9]{17,21}/g)[0]);
-	}else{
-		u = msg.guild ? msg.member : msg.author
-	}
-	
-	let uroles = [];
-	if(msg.guild){
-		msg.guild.members.get(u.id).roles.forEach(r=>{
-			uroles.push(msg.guild.roles.get(r))
-		})
-	}
-	uroles.sort((a,b)=>{
-		if(a.position < b.position){
-			return -1;
+	flexbot.lookupUser(msg,args ? args : msg.author.mention)
+	.then(u=>{
+		let uroles = [];
+		if(msg.guild && msg.guild.members.get(u.id)){
+			u = msg.guild.members.get(u.id);
+			msg.guild.members.get(u.id).roles.forEach(r=>{
+				uroles.push(msg.guild.roles.get(r))
+			})
 		}
-		if(a.position > b.position){
-			return 1;
-		}
-		return 0;
-	});
-	
-	let roles = [];
-	if(msg.guild){
-		uroles.forEach(r=>{
-			roles.push(r.name)
-		})
-	}
-	
-	let col = 0x7289DA;
-	if(msg.guild && msg.guild.members.get(u.id).roles.length > 0){
-		col = uroles[0].color;
-	}
-	
-	msg.channel.createMessage({embed:{
-		color:col,
+		uroles.sort((a,b)=>{
+			if(a.position < b.position){
+				return 1;
+			}
+			if(a.position > b.position){
+				return -1;
+			}
+			return 0;
+		});
 
-		author:{
-			name:"User Info: "+u.username+"#"+u.discriminator,
-			icon_url:"https://twemoji.maxcdn.com/36x36/2139.png"
-		},
-		//description:"**ID**: "+u.id+"\n**Nick**: "+(u.nick ? u.nick : "")+"\n**Playing**: "+(u.game ? u.game.name : "")+"\n**Roles**: "+roles.join(", ")+"\n\n[Avatar]("+u.avatarURL+")",
-		fields:[
-				{name:"ID",value:u.id,inline:true},
-				{name:"Nickname",value:u.nick ? u.nick : "None",inline:true},
-				{name:"Status",value:statusIcons[u.status]+" "+u.status,inline:true},
-				{name:"Playing",value:u.game ? u.game.name : "Nothing",inline:true},
-				{name:"Roles",value:u.guild ? roles.join(", ") : "Command not used in server.",inline:true},
-				{name:"Avatar",value:"[Full Size]("+u.avatarURL+")",inline:true}
-			],
-		thumbnail:{
-			url:u.avatarURL
+		let roles = [];
+		if(msg.guild){
+			uroles.forEach(r=>{
+				roles.push(r.name)
+			})
 		}
-	}})
-},["uinfo","user"])
 
-flexbot.addCommand("serverinfo","Info on current server",function(msg,args){
-	if(msg.guild){
-		let bots = 0;
-		msg.guild.members.forEach(m=>{if(m.bot) ++bots;})
-		
-		let owner = msg.guild.members.get(msg.guild.ownerID)
-		let emojis = [];
-		msg.guild.emojis.forEach(e=>{
-			emojis.push("<:"+e.name+":"+e.id+">")
-		})
+		let col = 0x7289DA;
+		if(msg.guild && msg.guild.members.get(u.id) && msg.guild.members.get(u.id).roles.length > 0){
+			col = uroles[0].color ? uroles[0].color : (uroles[1].color ? uroles[1].color : 0x7289DA);
+		}
 
 		msg.channel.createMessage({embed:{
-			color:0x7289DA,
+			color:col,
 
 			author:{
-				name:"Server Info: "+msg.guild.name,
+				name:"User Info: "+u.username+"#"+u.discriminator,
 				icon_url:"https://twemoji.maxcdn.com/36x36/2139.png"
 			},
-			description:"**Emojis**\n"+emojis.join(","),
+			//description:"**ID**: "+u.id+"\n**Nick**: "+(u.nick ? u.nick : "")+"\n**Playing**: "+(u.game ? u.game.name : "")+"\n**Roles**: "+roles.join(", ")+"\n\n[Avatar]("+u.avatarURL+")",
 			fields:[
-				{name:"ID",value:msg.guild.id,inline:true},
-				{name:"Owner",value:owner.username+"#"+owner.discriminator,inline:true},
-				{name:"Members",value:msg.guild.memberCount,inline:true},
-				{name:"Bots",value:bots+" ("+Math.floor((bots/msg.guild.memberCount)*100)+"% of members)",inline:true},
-				{name:"Channels",value:msg.guild.channels.size,inline:true},
-				{name:"Roles",value:msg.guild.roles.size,inline:true},
-				{name:"Emojis",value:msg.guild.emojis.length,inline:true},
-				{name:"Icon",value:"[Full Size](https://cdn.discordapp.com/icons/"+msg.guild.id+"/"+msg.guild.icon+".jpg)",inline:true}
-			],
+					{name:"ID",value:u.id,inline:true},
+					{name:"Nickname",value:u.nick ? u.nick : "None",inline:true},
+					{name:"Status",value:statusIcons[u.status]+" "+u.status,inline:true},
+					{name:"Playing",value:u.game ? u.game.name : "Nothing",inline:true},
+					{name:"Roles",value:u.guild ? (roles.length > 0 ? roles.join(", ") : "No roles") : "No roles",inline:true},
+					{name:"Avatar",value:"[Full Size]("+u.avatarURL+")",inline:true}
+				],
 			thumbnail:{
-				url:"https://cdn.discordapp.com/icons/"+msg.guild.id+"/"+msg.guild.icon+".jpg"
+				url:u.avatarURL
 			}
 		}})
-	}else{
-		msg.channel.createMessage("Can't use in PM's")
+	});
+},["uinfo","user"])
+
+flexbot.addCommand("serverinfo","Info on current server",async function(msg,args){
+	let g = msg.guild;
+	let a = "";
+	if(args){
+		if(/[0-9]{17,21}/.test(args)){
+			if(flexbot.bot.guilds.get(args.match(/[0-9]{17,21}/g)[0])){
+				g = flexbot.bot.guilds.get(args.match(/[0-9]{17,21}/g)[0]);
+			}else{
+				a = "Could not get guild found, defaulting to current (possibly not in guild)";
+				g = msg.guild;
+			}
+		}else if(!msg.guild){
+			msg.channel.createMessage("Cannot use in PMs.")
+			return;
+		}
 	}
+	let bots = 0;
+	g.members.forEach(m=>{if(m.bot) ++bots;})
+
+	let owner = (await bot.requestHandler.request("GET","/users/"+g.ownerID,true))
+	let emojis = [];
+	g.emojis.forEach(e=>{
+		emojis.push("<:"+e.name+":"+e.id+">")
+	})
+
+	msg.channel.createMessage({content:a,embed:{
+		color:0x7289DA,
+
+		author:{
+			name:"Server Info: "+g.name,
+			icon_url:"https://twemoji.maxcdn.com/36x36/2139.png"
+		},
+		description:"**Emojis**\n"+emojis.join(","),
+		fields:[
+			{name:"ID",value:g.id,inline:true},
+			{name:"Owner",value:owner.username+"#"+owner.discriminator,inline:true},
+			{name:"Members",value:g.memberCount,inline:true},
+			{name:"Bots",value:bots+" ("+Math.floor((bots/msg.guild.memberCount)*100)+"% of members)",inline:true},
+			{name:"Channels",value:g.channels.size,inline:true},
+			{name:"Roles",value:g.roles.size,inline:true},
+			{name:"Emojis",value:g.emojis.length,inline:true},
+			{name:"Icon",value:"[Full Size](https://cdn.discordapp.com/icons/"+g.id+"/"+g.icon+".jpg)",inline:true}
+		],
+		thumbnail:{
+			url:"https://cdn.discordapp.com/icons/"+g.id+"/"+g.icon+".jpg"
+		}
+	}})
 },["sinfo","ginfo","guildinfo"])
 
 flexbot.addCommand("botinfo","Info on a bot",function(msg,args){
-	if(/[0-9]{17,21}/.test(args)){
-		let u = args.match(/[0-9]{17,21}/g)[0];
-		
-		let data;
-	
-		request.get("https://bots.discord.pw/api/bots/"+u,{headers:{"Authorization":flexbot.dbotsapi}},(err,res,body)=>{
-			if(!err && res.statusCode == 200){
-				data = JSON.parse(body);
-		
-		let owners = [];
-		for(let i=0;i<data["owner_ids"].length;i++){
-			let o = flexbot.bot.users.get(data["owner_ids"][i]);
-			owners.push(o.username+"#"+o.discriminator);
-		};
-		
-		let ubot = flexbot.bot.users.get(u);
-		
-		msg.channel.createMessage({embed:{
-			color:0x7289DA,
+	flexbot.lookupUser(msg,args ? args : msg.author.mention)
+	.then(u=>{
 
-			author:{
-				name:"Bot Info: "+ubot.username+"#"+ubot.discriminator,
-				icon_url:"https://twemoji.maxcdn.com/36x36/2139.png"
-			},
-			description:data.description,
-			fields:[
-				{name:"ID",value:u,inline:true},
-				{name:"Owner(s)",value:owners.join(", "),inline:true},
-				{name:"Library",value:data.library,inline:true},
-				{name:"Prefix",value:"`"+data.prefix+"`",inline:true},
-				{name:"Invite",value:"[Click For Invite]("+data.invite_url+")",inline:true}
-			],
-			footer:{
-				text:"Info provided by Discord Bots API",
-				icon_url:"https://cdn.discordapp.com/icons/110373943822540800/5b72add698c1fa9b51d01c43cdba9542.jpg"
-			},
-			thumbnail:{
-				url:ubot.avatarURL
+		if(!u.bot){ msg.channel.createMessage("User is not a bot!"); return }
+		request.get("https://bots.discord.pw/api/bots/"+u.id,{headers:{"Authorization":flexbot.dbotsapi}},(err,res,body)=>{
+			if(!err && res.statusCode == 200){
+				let data = JSON.parse(body);
+
+				let owners = [];
+				for(let i=0;i<data["owner_ids"].length;i++){
+					let o = flexbot.bot.users.get(data["owner_ids"][i]);
+					owners.push(o.username+"#"+o.discriminator);
+				};
+
+				msg.channel.createMessage({embed:{
+					color:0x7289DA,
+
+					author:{
+						name:"Bot Info: "+u.username+"#"+u.discriminator,
+						icon_url:"https://twemoji.maxcdn.com/36x36/2139.png"
+					},
+					description:data.description,
+					fields:[
+						{name:"ID",value:u.id,inline:true},
+						{name:"Owner(s)",value:owners.join(", "),inline:true},
+						{name:"Library",value:data.library,inline:true},
+						{name:"Prefix",value:"`"+data.prefix+"`",inline:true},
+						{name:"Invite",value:"[Click For Invite]("+data.invite_url+")",inline:true}
+					],
+					footer:{
+						text:"Info provided by Discord Bots API",
+						icon_url:"https://cdn.discordapp.com/icons/110373943822540800/5b72add698c1fa9b51d01c43cdba9542.jpg"
+					},
+					thumbnail:{
+						url:u.avatarURL
+					}
+				}})
 			}
-		}})
-	}
+		});
 	});
-	}else{
-		msg.channel.createMessage("Bot not found, mention or use ID.")
-	}
 },["binfo"])

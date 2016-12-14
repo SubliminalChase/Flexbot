@@ -10,6 +10,7 @@
   "license": "N/A",
   "dependencies": {
     "async": "^2.1.2",
+    "cleverbot-node": "^0.2.4",
     "eris": "github:abalabahaha/eris#dev",
     "jimp": "^0.2.27",
     "mathjs": "^3.6.0",
