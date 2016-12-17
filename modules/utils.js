@@ -320,7 +320,7 @@ flexbot.addCommand("botinfo","Info on a bot",function(msg,args){
 						icon_url:"https://cdn.discordapp.com/icons/110373943822540800/5b72add698c1fa9b51d01c43cdba9542.jpg"
 					},
 					thumbnail:{
-						url:u.avatarURL
+						url:"https://cdn.discordapp.com/avatars/"+u.id+"/"+u.avatar
 					}
 				}})
 			}

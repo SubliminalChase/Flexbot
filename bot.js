@@ -14,6 +14,9 @@ var fs = require("fs");
 var path = require("path");
 var emoji = require("node-emoji");
 var reload = require("require-reload")(require);
+var sqlite = require("sqlite3");
+
+flexbot.db = new sqlite.Database("flexbot.db");
 
 var bot = flexbot.bot
 bot.on("ready", () => {

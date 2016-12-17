@@ -150,3 +150,16 @@ flexbot.addCommand("dog","The typical picture of a dog command",function(msg,arg
 		}
 	});
 })
+
+flexbot.addCommand("currency","Convert one form of currency to another",function(msg,args){
+	let a = args.split(" ")
+	let request = require("request");
+	request.get("https://www.google.com/finance/converter?a=1&from="+a[0]+"&to="+a[1],function(e,res,body){
+		if(!e && res.statusCode == 200){
+			let amt = body.match(/<span class=bld>(.+)<\/span>/)[1];
+			msg.channel.createMessage("**1 "+a[0].toUpperCase()+"** is equal to **"+amt+"**");
+		}else{
+			msg.channel.createMessage("An error occured, try again later.\n\n```\n"+e+"```")
+		}
+	});
+})
