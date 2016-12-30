@@ -12,17 +12,14 @@ flexbot.addCommand("status","Sets bots status",function(msg,args){
 
 flexbot.addCommand("avatar","Get an avatar of someone",async function(msg,args){
 	var request = require('request').defaults({encoding:null});
-		let u;
-		if(/[0-9]{17,21}/.test(args)){
-			u = (await flexbot.bot.requestHandler.request("GET","/users/"+args.match(/[0-9]{17,21}/)[0],true))
-		}else{
-			u = msg.author
-		}
-		request.get("https://cdn.discordapp.com/avatars/"+u.id+"/"+u.avatar+".jpg",function(e,res,body){
+	flexbot.lookupUser(msg,args ? args : msg.author.mention)
+	.then(u=>{
+		request.get("https://cdn.discordapp.com/avatars/"+u.id+"/"+u.avatar+".gif",function(e,res,body){
 			if(!e && res.statusCode == 200){
-				msg.channel.createMessage(`Avatar for **${u.username}#${u.discriminator}**:`,{name:"avatar.png",file:new Buffer(body)})
+				msg.channel.createMessage(`Avatar for **${u.username}#${u.discriminator}**:`,{name:"avatar.gif",file:new Buffer(body)})
 			}
 		})
+	})
 },[],"[user]")
 
 flexbot.addCommand("roll","Roll dice",function(msg,args){
@@ -33,15 +30,15 @@ flexbot.addCommand("roll","Roll dice",function(msg,args){
 
 		var dice = [
 			w+w+w+"\n"+w+b+w+"\n"+w+w+w,
-			b+w+w+"\n"+w+w+w+"\n"+w+w+b, 
-			b+w+w+"\n"+w+b+w+"\n"+w+w+b, 
-			b+w+b+"\n"+w+w+w+"\n"+b+w+b, 
-			b+w+b+"\n"+w+b+w+"\n"+b+w+b, 
+			b+w+w+"\n"+w+w+w+"\n"+w+w+b,
+			b+w+w+"\n"+w+b+w+"\n"+w+w+b,
+			b+w+b+"\n"+w+w+w+"\n"+b+w+b,
+			b+w+b+"\n"+w+b+w+"\n"+b+w+b,
 			b+w+b+"\n"+b+w+b+"\n"+b+w+b
 		]
-		
+
 		var rng = Math.floor(Math.random()*(dice.length))
-		
+
 		setTimeout(()=>{
 			flexbot.bot.editMessage(msg.channel.id,m.id,"You rolled: "+(rng+1)+"\n"+dice[rng])
 		},2500)
@@ -69,9 +66,9 @@ flexbot.addCommand("stats","Oooh, numbers",function(msg,args){
 	let m = parseInt(s/60)
 	s=s%60
 	s=parseInt(s)
-	
+
 	let tstr = (h < 10 ? "0"+h : h)+":"+(m < 10 ? "0"+m : m)+":"+(s < 10 ? "0"+s : s)
-	
+
 	let cmdcount = 0
 	for(c in flexbot.cmds){cmdcount++}
 
@@ -102,7 +99,7 @@ flexbot.addCommand("ship","Ship two users.",function(msg,args){
 	}else if(/[0-9]{17,21}/.test(a[0]) && /[0-9]{17,21}/.test(a[1])){
 		let u1 = flexbot.bot.users.get(args.match(/[0-9]{17,21}/g)[0])
 		let u2 = flexbot.bot.users.get(args.match(/[0-9]{17,21}/g)[1])
-		
+
 		msg.channel.createMessage(emoji.get(":heart:")+" **"+msg.author.username+"** ships **"+u1.username+"** with **"+u2.username+"** ("+(Math.floor(Math.random()*100)+1)+"% compatibility)")
 	}else{
 		msg.channel.createMessage("User not found.")

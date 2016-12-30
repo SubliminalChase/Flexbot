@@ -4,10 +4,10 @@ var request = require('request')
 var xml2js = require("xml2js")
 
 flexbot.addCommand("e621","[NSFW] Gets an image from e621.",function(msg,args){
-	if(!msg.guild || msg.channel.name.search("nsfw") > -1 || msg.channel.topic.indexOf("[nsfw]") > -1){
+	if(!msg.guild || msg.channel.name.search("nsfw") > -1 || msg.channel.topic.length > 0 && msg.channel.topic.indexOf("[nsfw]") > -1){
 		let tags = [];
 		if(args) tags = JSON.parse(JSON.stringify(args.split(" ")));
-		
+
 		let tagss = "";
 		for(t in tags){
 			tagss+=tags[t]+"%20"
@@ -17,7 +17,7 @@ flexbot.addCommand("e621","[NSFW] Gets an image from e621.",function(msg,args){
 				let data = JSON.parse(body)
 				if(data.length>0){
 				let post = data[Math.floor(Math.random()*data.length)]
-				
+
 				msg.channel.createMessage({embed:{
 					color:0x000080,
 					description:"**Author**: "+post.author+"\n**Score**: "+post.score+"\n**Rating**: "+post.rating+"\n**Tags**: \n```"+post.tags+"```",
@@ -39,10 +39,10 @@ flexbot.addCommand("e621","[NSFW] Gets an image from e621.",function(msg,args){
 })
 
 flexbot.addCommand("gelbooru","[NSFW] Gets an image from Gelbooru.",function(msg,args){
-	if(!msg.guild || msg.channel.name.search("nsfw") > -1 || msg.channel.topic.toLowerCase().indexOf("[nsfw]") > -1){
+	if(!msg.guild || msg.channel.name.search("nsfw") > -1 || msg.channel.topic.length > 0 && msg.channel.topic.indexOf("[nsfw]") > -1){
 		let tags = [];
 		if(args) tags = JSON.parse(JSON.stringify(args.split(" ")));
-		
+
 		let tagss = "";
 		for(t in tags){
 			tagss+=tags[t]+"%20"
@@ -74,10 +74,10 @@ flexbot.addCommand("gelbooru","[NSFW] Gets an image from Gelbooru.",function(msg
 },["gb","gel"])
 
 flexbot.addCommand("rule34","[NSFW] Gets an image from Rule 34.",function(msg,args){
-	if(!msg.guild || msg.channel.name.search("nsfw") > -1 || msg.channel.topic.toLowerCase().indexOf("[nsfw]") > -1){
+	if(!msg.guild || msg.channel.name.search("nsfw") > -1 || msg.channel.topic.length > 0 && msg.channel.topic.indexOf("[nsfw]") > -1){
 		let tags = [];
 		if(args) tags = JSON.parse(JSON.stringify(args.split(" ")));
-		
+
 		let tagss = "";
 		for(t in tags){
 			tagss+=tags[t]+"%20"

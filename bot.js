@@ -6,7 +6,8 @@ flexbot.bot = new Eris(config.token);
 flexbot.prefix = "flexbot.";
 flexbot.prefix2 = "f!";
 flexbot.oid = config.ownerid;
-flexbot.dbotsapi = config.dbotsapi
+flexbot.dbotsapi = config.dbotsapi;
+flexbot.carbonkey = config.carbonkey;
 
 var request = require('request')
 var util = require("util");
@@ -14,15 +15,13 @@ var fs = require("fs");
 var path = require("path");
 var emoji = require("node-emoji");
 var reload = require("require-reload")(require);
-var sqlite = require("sqlite3");
-
-flexbot.db = new sqlite.Database("flexbot.db");
 
 var bot = flexbot.bot
 bot.on("ready", () => {
 	console.log("Loaded FlexBot");
 
 	request.post("https://bots.discord.pw/api/bots/"+bot.user.id+"/stats",{headers:{"Authorization":config.dbotsapi},json:{server_count:bot.guilds.size}});
+	request.post("https://www.carbonitex.net/discord/data/botdata.php",{headers:{"Content-Type":"application/json"},json:{key:config.carbonkey,servercount:bot.guilds.size}});
 
 	bot.getDMChannel(config.ownerid)
 		.then((c)=>{
@@ -85,55 +84,25 @@ function logError(cmd,msg,args,error){
 var cmds = {
 	help:{
 		name:"help",
-		desc:"Lists commands",
-		args:"<cmd>",
+		desc:"Lists commands.",
+		args:"",
 		func: function(msg,args){
-		if(msg.guild){
-		bot.createMessage(msg.channel.id,emoji.get(":envelope_with_arrow:")+" Sending via DM.");
-		}
-
-		let content = {embed:{
-			author:{
-				name:"FlexBot Help",
-				icon_url:bot.user.avatarURL
-			},
-			color:0xff8000
-		}};
-		if(args){
-			let c;
-			for(let i in flexbot.cmds){
-				if(flexbot.cmds[i].name == args){
-					c = flexbot.cmds[i];
-				}
-			}
-			if(c){
-				content.embed.author.name += " - "+c.name;
-				content.embed.fields = [
-					{name:"Name",value:c.name,inline:true},
-					{name:"Description",value:c.desc,inline:true},
-					{name:"Arguments",value:c.args,inline:true},
-					{name:"Aliases",value:(c.aliases ? c.aliases.join(", ") : "none"),inline:true},
-				];
-			}else{
-				content = "Command not found.";
-			}
-		}else{
 			var sorted = {}
 			Object.keys(cmds).sort().forEach(k => { sorted[k] = cmds[k] })
 
-			let i = 0
+			let co = 0
 			let res = []
 			for(item in sorted){
 				var c = cmds[item]
-				i++
-				res.push(c.name)
+				co++
+				res.push("\t\u2022 "+c.name+" - "+c.desc)
 			}
-			content = {content:"Do `f!help <command>` for in-depth help.\n\n**Prefixes**: `"+flexbot.prefix+", "+flexbot.prefix2+", @"+bot.user.username+"`\n\n[] arguments = required, <> = optional\n\n**Commands**:\n```\n"+res.join(", ")+"```"};
-		}
-
-			bot.getDMChannel(msg.author.id).then((c)=>{
-				c.createMessage(content)
-			})
+			
+			msg.channel.createMessage(emoji.get("envelope_with_arrow")+" Sending help via DM.")
+			bot.getDMChannel(msg.author.id)
+			.then((c)=>{
+			bot.createMessage(c.id,"```md\n# Commands for FlexBot\n"+res.join("\n")+"\n\n# Total commands: "+co+"\n```")
+			});
 		},
 		aliases:[]
 	},
@@ -404,6 +373,7 @@ bot.on("guildCreate",async function(s){
 			}})
 
 	request.post("https://bots.discord.pw/api/bots/"+bot.user.id+"/stats",{headers:{"Authorization":config.dbotsapi},json:{server_count:bot.guilds.size}});
+	request.post("https://www.carbonitex.net/discord/data/botdata.php",{headers:{"Content-Type":"application/json"},json:{key:config.carbonkey,servercount:bot.guilds.size}});
 })
 
 bot.on("guildDelete",s=>{
@@ -422,6 +392,7 @@ bot.on("guildDelete",s=>{
 	}})
 
 	request.post("https://bots.discord.pw/api/bots/"+bot.user.id+"/stats",{headers:{"Authorization":config.dbotsapi},json:{server_count:bot.guilds.size}});
+	request.post("https://www.carbonitex.net/discord/data/botdata.php",{headers:{"Content-Type":"application/json"},json:{key:config.carbonkey,servercount:bot.guilds.size}});
 })
 
 bot.connect();

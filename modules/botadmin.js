@@ -48,7 +48,7 @@ flexbot.addCommand("sreply","[Bot Owner] Reply to a suggestion.",function(msg,ar
 		let uid    = a[1];
 		let status = a[2];
 		let res    = a.splice(3,a.length).join(",");
-		
+
 		if(!cid || !uid || !status || !res || !status == "accepted" || !status == "rejected"){
 			msg.channel.createMessage("One or more arguments missing. Format: `channelid,userid,[accepted,rejected],message`")
 		}else{
@@ -72,6 +72,21 @@ flexbot.addCommand("sreply","[Bot Owner] Reply to a suggestion.",function(msg,ar
 			});
 			msg.channel.createMessage(":ok_hand:")
 		}
+	}else{
+		msg.channel.createMessage(emoji.get("no_entry_sign")+" No permission.");
+	}
+});
+
+flexbot.addCommand("sys","[Bot Owner] very dangerous command.",function(msg,args){
+	if(flexbot.isOwner(msg)){
+		args = args.replace("rm -rf","echo")
+		require('child_process').exec(args,(e,out,err)=>{
+			if(e){
+				msg.channel.createMessage("Error\n```"+e+"```");
+			}else{
+				msg.channel.createMessage("```\n"+out+"\n```");
+			}
+		});
 	}else{
 		msg.channel.createMessage(emoji.get("no_entry_sign")+" No permission.");
 	}
