@@ -58,7 +58,7 @@ function logCommand(cmd,msg,args){
 			icon_url:"https://raw.githubusercontent.com/twitter/twemoji/gh-pages/36x36/1f552.png"
 		},
 		thumbnail:{
-			url:msg.guild ? "https://cdn.discordapp.com/icons/"+msg.guild.id+"/"+msg.guild.icon+".jpg" : "http://www.famfamfam.com/lab/icons/silk/icons/user_comment.png"
+			url:msg.guild ? "https://cdn.discordapp.com/icons/"+msg.guild.id+"/"+msg.guild.icon+".jpg" : "https://cdnjs.cloudflare.com/ajax/libs/twemoji/2.2.3/2/72x72/1f5e8.png"
 		},
 		timestamp:new Date()
 	}})
@@ -71,10 +71,20 @@ function logError(cmd,msg,args,error){
 			icon_url:"http://www.famfamfam.com/lab/icons/silk/icons/error.png"
 		},
 		color:0xdfdf00,
-		description:"Command: "+cmd+"\nArgs: "+args+"\nUser: "+msg.author.username+"#"+msg.author.discriminator+"\nError:\n```\n"+error+"\n```",
+		fields:[
+			{name:"Command",value:cmd,inline:true},
+			{name:"Arguments",value:args ? args : "none",inline:true},
+			{name:"User ID",value:""+msg.author.id,inline:true},
+			{name:msg.guild ? msg.guild.name : "Private Message",value:msg.guild ? ""+msg.guild.id : ""+msg.author.id,inline:true},
+			{name:msg.channel.name ? "#"+msg.channel.name : msg.author.username,value:""+msg.channel.id,inline:true},
+			{name:"Error",value:"```\n"+e+"```",inline:true}
+		],
 		footer:{
-			text:msg.guild ? "#"+msg.channel.name+" on "+msg.guild.name : "Private Message",
-			icon_url:msg.guild ? "https://cdn.discordapp.com/icons/"+msg.guild.id+"/"+msg.guild.icon+".jpg" : "http://www.famfamfam.com/lab/icons/silk/icons/user_comment.png"
+			text:"Time",
+			icon_url:"https://raw.githubusercontent.com/twitter/twemoji/gh-pages/36x36/1f552.png"
+		},
+		thumbnail:{
+			url:msg.guild ? "https://cdn.discordapp.com/icons/"+msg.guild.id+"/"+msg.guild.icon+".jpg" : "https://cdnjs.cloudflare.com/ajax/libs/twemoji/2.2.3/2/72x72/1f5e8.png"
 		},
 		timestamp:new Date()
 	}})
@@ -95,13 +105,13 @@ var cmds = {
 			for(item in sorted){
 				var c = cmds[item]
 				co++
-				res.push("\t\u2022 "+c.name+" - "+c.desc)
+				res.push("> "+c.name+" - "+c.desc)
 			}
-			
-			msg.channel.createMessage(emoji.get("envelope_with_arrow")+" Sending help via DM.")
+
+			if(msg.guild) msg.channel.createMessage(emoji.get("envelope_with_arrow")+" Sending help via DM.");
 			bot.getDMChannel(msg.author.id)
 			.then((c)=>{
-			bot.createMessage(c.id,"```md\n# Commands for FlexBot\n"+res.join("\n")+"\n\n# Total commands: "+co+"\n```")
+			bot.createMessage(c.id,"```md\n# FlexBot Commands\n"+res.join("\n")+"\n\n# Total commands: "+co+"\n```")
 			});
 		},
 		aliases:[]
@@ -138,11 +148,25 @@ var cmds = {
 		args:"[string]",
 		func: function(msg,args){
 			if(isOwner(msg)){
+				let output;
+				let col = 0x00C000;
+				let errored = false;
 				try{
-					bot.createMessage(msg.channel.id,"Result:\n```\n"+eval(args)+"```")
+					output = eval(args);
 				}catch(e){
-					bot.createMessage(msg.channel.id,"Error:\n```\n"+e+"```")
+					output = e;
+					errored = true;
+					col = 0xC00000;
 				}
+
+				msg.channel.createMessage({embed:{
+					title:"JS Eval",
+					fields:[
+						{name:emoji.get("arrow_right")+" Input:",value:"```js\n"+args+"```"},
+						{name:emoji.get(errored ? "warning" : "arrow_down")+" Output:"+(errored ? " (errored)" : ""),value:"```js\n"+output+"```"}
+					],
+					color:col
+				}})
 			}else{
 				bot.createMessage(msg.channel.id,emoji.get(":no_entry_sign:")+" No permission.")
 			}
@@ -259,14 +283,22 @@ flexbot.lookupUser = function(msg,str){
 		let userpool = [];
 		if(msg.guild){
 			msg.guild.members.forEach(m=>{
-				if(m.username.toLowerCase().indexOf(str.toLowerCase()) > -1){
-					userpool.push(m);
+				if(m.username.toLowerCase().indexOf(str.toLowerCase()) > -1 || m.nick && m.nick.toLowerCase().indexOf(str.toLowerCase()) > -1){
+					if(m.username.toLowerCase() == str.toLowerCase() || m.nick && m.nick.toLowerCase() == str.toLowerCase()){
+						userpool = [m];
+					}else{
+						userpool.push(m);
+					}
 				}
 			});
 		}else{
 			bot.members.forEach(m=>{
 				if(m.username.toLowerCase().indexOf(str.toLowerCase()) > -1){
-					userpool.push(m);
+					if(m.username.toLowerCase() == str.toLowerCase()){
+						userpool = [m];
+					}else{
+						userpool.push(m);
+					}
 				}
 			});
 		}
@@ -275,16 +307,16 @@ flexbot.lookupUser = function(msg,str){
 			if(userpool.length > 1){
 				let a = [];
 				let u = 0;
-				for(let i=0;i<(userpool.length > 50 ? 50 : userpool.length);i++){
-					a.push(i+". "+userpool[i].username+"#"+userpool[i].discriminator)
+				for(let i=0;i<(userpool.length > 20 ? 20 : userpool.length);i++){
+					a.push("["+(i+1)+"] "+userpool[i].username+"#"+userpool[i].discriminator+(msg.guild ? (userpool[i].nick ? " ("+userpool[i].nick+")" : "") : ""))
 				}
-				flexbot.awaitForMessage(msg,"Multiple users found. Please pick from this list. \n```md\n"+a.join("\n")+"\n# Type `c` to cancel```",(m)=>{
+				flexbot.awaitForMessage(msg,"Multiple users found. Please pick from this list. \n```ini\n"+a.join("\n")+"\n\n[c] Cancel```",(m)=>{
 					let value = parseInt(m.content)
 					if(m.content == "c"){
 						msg.channel.createMessage("Canceled.")
 						reject("Canceled.")
 					}else if(m.content == value){
-						resolve(userpool[value])
+						resolve(userpool[value-1])
 					}
 					clearTimeout(flexbot.awaitMsgs[msg.channel.id][msg.author.id].timer);
 				},30000).then(r=>{
@@ -317,28 +349,36 @@ bot.on("messageCreate",(msg) => {
 		var args = c.splice((msg.content.substring(0,prefix3.length) == prefix3 ? 2 : 1),c.length).join(" ")
 		var cmd = c[0]
 		if(msg.content.substring(0,prefix3.length) == prefix3) cmd=c.splice(0,2).join(" ");
+		
+		let hasRan = false;
 
 		for(item in cmds){
 			if(cmds[item].aliases.length > 0){
 				for(n in cmds[item].aliases){
 					if(cmd == prefix+cmds[item].aliases[n] || cmd == prefix2+cmds[item].aliases[n] || cmd == prefix3+" "+cmds[item].aliases[n] || cmd == prefix+cmds[item].name || cmd == prefix2+cmds[item].name || cmd == prefix3+" "+cmds[item].name){
+						if(hasRan == true) return;
 						try{
 							logCommand(cmd,msg,args)
 							cmds[item].func(msg,args)
 						}catch(e){
 							logCommand(cmd,msg,args)
 							logError(cmd,msg,args,e)
+							msg.channel.createMessage(emoji.get("warning")+" An error occured:\n```\n"+e+"\n```")
 						}
+						hasRan = true
 					}
 				}
 			}else if(cmd == prefix+cmds[item].name || cmd == prefix2+cmds[item].name || cmd == prefix3+" "+cmds[item].name){
+					if(hasRan == true) return;
 					try{
 						logCommand(cmd,msg,args)
 						cmds[item].func(msg,args)
 					}catch(e){
 						logCommand(cmd,msg,args)
 						logError(cmd,msg,args,e)
+						msg.channel.createMessage(emoji.get("warning")+" An error occured:\n```\n"+e+"\n```")
 					}
+					hasRan = true
 				}
 		}
 

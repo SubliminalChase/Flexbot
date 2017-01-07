@@ -44,7 +44,7 @@ flexbot.addCommand("mods","Moderator list",function(msg,args){
 
 		msg.guild.members.forEach((u)=>{
 			if(msg.channel.permissionsOf(u.id).has("kickMembers") && !u.bot){
-				a[u.status]+="\n"+statusIcons[u.status]+ u.username+"#"+u.discriminator
+				a[u.status]+="\n"+statusIcons[u.status]+ u.username+"#"+u.discriminator+(u.nick ? " ("+u.nick+")" : "")
 			}
 		})
 
@@ -99,24 +99,6 @@ flexbot.addCommand("uptime","Contest of \"how long can we go without a restart\"
 	msg.channel.createMessage(emoji.get(":clock3:")+"**Uptime**: "+tstr)
 })
 
-let unicode = []
-
-let fetchUnicode = function(){
-if(unicode.length == 0){
-request.get("http://unicode.org/Public/UNIDATA/Index.txt",function(e,res,body){
-	if(!e && res.statusCode == 200){
-		let u1 = body.toString("utf-8").split("\n");
-		for(let i=0;i<u1.length;i++){
-			let ch = u1[i].split("\t");
-			unicode[ch[1]] = ch[0];
-		}
-	}
-})
-
-return unicode.length
-}
-}
-
 flexbot.addCommand("emoji","Get an image of an emoji/custom emote.",async function(msg,args){
 	if(/[0-9]{17,21}/.test(args)){
 		let eid = args.match(/[0-9]{17,21}/)
@@ -142,7 +124,7 @@ flexbot.addCommand("emoji","Get an image of an emoji/custom emote.",async functi
 			if(e){
 			let twemoji = require("twemoji")
 			let ehex = twemoji.convert.toCodePoint(emoji.get(e))
-			let baseurl = "https://raw.githubusercontent.com/twitter/twemoji/gh-pages"
+			let baseurl = "https://flexbox.xyz/discord/twemoji"
 
 			msg.channel.createMessage({embed:{
 				title:e,
@@ -176,26 +158,14 @@ flexbot.addCommand("servers","A pagenated server list",function(msg,args){
 	let index = 1
 	if(args) index=parseInt(args);
 	let list = ""
-	let page = servers.slice((index-1)*10,(index*10))
+	let page = servers.slice((index-1)*20,(index*20))
 	for(i=0;i<page.length;i++){
 		let bots = 0;
 		let s = page[i]
 		s.members.forEach(m=>{if(m.bot) ++bots;})
-		list+=((i+1)+((index-1)*10))+". **"+s.name+"**\n\t"+s.memberCount+" members | "+bots+" bots ("+Math.floor((bots/s.memberCount)*100)+"%)\n"
+		list+=((i+1)+((index-1)*20))+". "+s.name+"\n\t"+s.memberCount+" members | "+bots+" bots ("+Math.floor((bots/s.memberCount)*100)+"%)\n"
 	}
-	msg.channel.createMessage({embed:{
-		color:0x7289DA,
-
-		author:{
-			name:"FlexBot Server List - Page "+index,
-			icon_url:"https://twemoji.maxcdn.com/36x36/1f4d1.png"
-		},
-		footer:{
-			text:"Total servers: "+flexbot.bot.guilds.size,
-			icon_url:"https://twemoji.maxcdn.com/36x36/1f522.png"
-		},
-		description:list
-	}})
+	msg.channel.createMessage("```md\n# Server List\n"+list+"\n# Total Servers: "+flexbot.bot.guilds.size+"\n> Page "+index+"```")
 },["guilds"])
 
 var scolors = {
@@ -247,15 +217,15 @@ flexbot.addCommand("uinfo","Get info about a user",function(msg,args){
 			fields:[
 					{name:"ID",value:u.id,inline:true},
 					{name:"Nickname",value:u.nick ? u.nick : "None",inline:true},
-					{name:"Status",value:statusIcons[u.status]+" "+u.status,inline:true},
+					{name:"Status",value:u.game ? (u.game.url ? "<:vpStreaming:212789640799846400> [Streaming]("+u.game.url+")" : statusIcons[u.status]+" "+u.status ) : statusIcons[u.status]+" "+u.status,inline:true},
 					{name:"Playing",value:u.game ? u.game.name : "Nothing",inline:true},
 					{name:"Roles",value:u.guild ? (roles.length > 0 ? roles.join(", ") : "No roles") : "No roles",inline:true},
 					{name:"Created At",value:new Date(u.createdAt).toUTCString(),inline:true},
 					{name:"Joined At",value:new Date(u.joinedAt).toUTCString(),inline:true},
-					{name:"Avatar",value:"[Full Size]("+u.avatarURL.replace("jpg","gif")+")",inline:true}
+					{name:"Avatar",value:"[Full Size]("+u.avatarURL+")",inline:true}
 				],
 			thumbnail:{
-				url:u.avatarURL.replace("jpg","gif")
+				url:u.avatarURL
 			}
 		}})
 	});
@@ -471,4 +441,20 @@ flexbot.addCommand("rinfo","Get info on a guild role.",function(msg,args){
 			}})
 		});
 	}
-})
+});
+
+flexbot.addCommand("shared","Gets how many servers shared of a user.",function(msg,args){
+	flexbot.lookupUser(msg,args ? args : msg.author.mention)
+	.then(u=>{
+		let shared = 0;
+		flexbot.bot.guilds.forEach(g=>{
+			if(g.members.get(u.id)) shared++;
+		});
+
+		if(u.id == flexbot.bot.user.id){
+			msg.channel.createMessage("I'm in "+flexbot.bot.guilds.size+" servers with myself thank you very much.")
+		}else{
+			msg.channel.createMessage("**"+u.username+"#"+u.discriminator+"** shares **"+shared+" server(s)** with FlexBot.")
+		}
+	});
+});

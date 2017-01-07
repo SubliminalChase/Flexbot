@@ -4,7 +4,7 @@ var request = require('request')
 var xml2js = require("xml2js")
 
 flexbot.addCommand("e621","[NSFW] Gets an image from e621.",function(msg,args){
-	if(!msg.guild || msg.channel.name.search("nsfw") > -1 || msg.channel.topic.length > 0 && msg.channel.topic.indexOf("[nsfw]") > -1){
+	if(!msg.guild || msg.channel.name.search("nsfw") > -1 || msg.channel.topic && msg.channel.topic.length > 0 && msg.channel.topic.indexOf("[nsfw]") > -1){
 		let tags = [];
 		if(args) tags = JSON.parse(JSON.stringify(args.split(" ")));
 
@@ -29,7 +29,7 @@ flexbot.addCommand("e621","[NSFW] Gets an image from e621.",function(msg,args){
 					}
 				}})
 				}else{
-					msg.channel.createMessage("Nothing found.")
+					msg.channel.createMessage("Nothing found. Try using _ for multi word tags as space seperates tags.")
 				}
 			}
 		})
@@ -39,7 +39,7 @@ flexbot.addCommand("e621","[NSFW] Gets an image from e621.",function(msg,args){
 })
 
 flexbot.addCommand("gelbooru","[NSFW] Gets an image from Gelbooru.",function(msg,args){
-	if(!msg.guild || msg.channel.name.search("nsfw") > -1 || msg.channel.topic.length > 0 && msg.channel.topic.indexOf("[nsfw]") > -1){
+	if(!msg.guild || msg.channel.name.search("nsfw") > -1 || msg.channel.topic && msg.channel.topic.length > 0 && msg.channel.topic.indexOf("[nsfw]") > -1){
 		let tags = [];
 		if(args) tags = JSON.parse(JSON.stringify(args.split(" ")));
 
@@ -64,7 +64,7 @@ flexbot.addCommand("gelbooru","[NSFW] Gets an image from Gelbooru.",function(msg
 						}
 					}})
 				}else{
-					msg.channel.createMessage("Nothing found.")
+					msg.channel.createMessage("Nothing found. Try using _ for multi word tags as space seperates tags.")
 				}
 			}
 		})
@@ -74,7 +74,7 @@ flexbot.addCommand("gelbooru","[NSFW] Gets an image from Gelbooru.",function(msg
 },["gb","gel"])
 
 flexbot.addCommand("rule34","[NSFW] Gets an image from Rule 34.",function(msg,args){
-	if(!msg.guild || msg.channel.name.search("nsfw") > -1 || msg.channel.topic.length > 0 && msg.channel.topic.indexOf("[nsfw]") > -1){
+	if(!msg.guild || msg.channel.name.search("nsfw") > -1 || msg.channel.topic && msg.channel.topic.length > 0 && msg.channel.topic.indexOf("[nsfw]") > -1){
 		let tags = [];
 		if(args) tags = JSON.parse(JSON.stringify(args.split(" ")));
 
@@ -99,7 +99,7 @@ flexbot.addCommand("rule34","[NSFW] Gets an image from Rule 34.",function(msg,ar
 					}
 				}})
 				}else{
-					msg.channel.createMessage("Nothing found.")
+					msg.channel.createMessage("Nothing found. Try using _ for multi word tags as space seperates tags.")
 				}
 			}
 		})
@@ -107,3 +107,37 @@ flexbot.addCommand("rule34","[NSFW] Gets an image from Rule 34.",function(msg,ar
 		msg.channel.createMessage("Channel name does not contain `nsfw` and topic does not contain `[nsfw]`.")
 	}
 },["r34"])
+
+flexbot.addCommand("ibsearch","[NSFW] Gets an image from ibsearch.",function(msg,args){
+	if(!msg.guild || msg.channel.name.search("nsfw") > -1 || msg.channel.topic && msg.channel.topic.length > 0 && msg.channel.topic.indexOf("[nsfw]") > -1){
+		let tags = [];
+		if(args) tags = JSON.parse(JSON.stringify(args.split(" ")));
+
+		let tagss = "";
+		for(t in tags){
+			tagss+=tags[t]+"%20"
+		}
+		request.get("http://ibsearch.xxx/api/v1/images.json?q="+tagss+"&limit=75&shuffle=20",{headers:{"User-Agent":"FlexBot/8.0 (Flex)"}},function(e,res,body){
+			if(!e && res.statusCode == 200){
+				let data = JSON.parse(body)
+				if(data && data.length > 0){
+				let post = data[Math.floor(Math.random()*data.length)]
+				msg.channel.createMessage({embed:{
+					color:Math.floor(Math.random()*16777216),
+					description:"**Rating**: "+post.rating+"\n**Tags**: \n```"+post.tags+"```",
+					fields:[
+						{name:"Image",value:"[Full Sized]("+encodeURI("https://"+post.server+".ibsearch.xxx/"+post.path)+")"}
+					],
+					image:{
+						url:"https://"+post.server+".ibsearch.xxx/"+post.path
+					}
+				}})
+				}else{
+					msg.channel.createMessage("Nothing found. Try using _ for multi word tags as space seperates tags.")
+				}
+			}
+		})
+	}else{
+		msg.channel.createMessage("Channel name does not contain `nsfw` and topic does not contain `[nsfw]`.")
+	}
+},["ib"])

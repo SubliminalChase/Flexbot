@@ -1,5 +1,6 @@
 var flexbot = global.flexbot
 var emoji = require("node-emoji")
+var request = require('request')
 
 flexbot.addCommand("echo","Echo, echo, echo",function(msg,args){
 	msg.channel.createMessage("\u200b"+args)
@@ -10,13 +11,16 @@ flexbot.addCommand("status","Sets bots status",function(msg,args){
 	msg.channel.createMessage("Set status.")
 },[],"[string]")
 
-flexbot.addCommand("avatar","Get an avatar of someone",async function(msg,args){
-	var request = require('request').defaults({encoding:null});
+flexbot.addCommand("avatar","Get an avatar of someone",function(msg,args){
 	flexbot.lookupUser(msg,args ? args : msg.author.mention)
 	.then(u=>{
-		request.get("https://cdn.discordapp.com/avatars/"+u.id+"/"+u.avatar+".gif",function(e,res,body){
-			if(!e && res.statusCode == 200){
-				msg.channel.createMessage(`Avatar for **${u.username}#${u.discriminator}**:`,{name:"avatar.gif",file:new Buffer(body)})
+		let av = "https://cdn.discordapp.com/avatars/"+u.id+"/"+u.avatar+"."+(u.avatar.startsWith("a_") ? "gif" : "png")+"?size=1024";
+		msg.channel.createMessage({
+			content:"Avatar for **"+u.username+"#"+u.discriminator+"**:",
+			embed:{
+				image:{
+					url:av
+				}
 			}
 		})
 	})
@@ -72,14 +76,7 @@ flexbot.addCommand("stats","Oooh, numbers",function(msg,args){
 	let cmdcount = 0
 	for(c in flexbot.cmds){cmdcount++}
 
-	msg.channel.createMessage({embed:{
-		color:0x009682,
-		author:{
-			name:"FlexBot Stats",
-			icon_url:flexbot.bot.user.avatarURL
-		},
-		description:"**Servers**: "+flexbot.bot.guilds.size+"\n**Users Seen**: "+flexbot.bot.users.size+"\n**Commands**: "+cmdcount+"\n**Uptime**: "+tstr
-	}})
+	msg.channel.createMessage("```ini\n; FlexBot Stats\nservers = "+flexbot.bot.guilds.size+"\ncommands = "+cmdcount+"\n[Uptime: "+tstr+"]\n```")
 })
 
 flexbot.addCommand("invite","Invite FlexBot to your server!",function(msg,args){
@@ -91,18 +88,24 @@ flexbot.addCommand("calc","Do maths",function(msg,args){
 	msg.channel.createMessage("Result: "+math.eval(args));
 },["math"],"[math stuffs]")
 
-flexbot.addCommand("ship","Ship two users.",function(msg,args){
-	let a = args.split(",")
-	if(/[0-9]{17,21}/.test(a[0]) && !a[1]){
-		let u = flexbot.bot.users.get(args.match(/[0-9]{17,21}/g)[0])
-		msg.channel.createMessage(emoji.get(":heart:")+" **"+msg.author.username+"** ships themself with **"+u.username+"** ("+(Math.floor(Math.random()*100)+1)+"% compatibility)")
-	}else if(/[0-9]{17,21}/.test(a[0]) && /[0-9]{17,21}/.test(a[1])){
-		let u1 = flexbot.bot.users.get(args.match(/[0-9]{17,21}/g)[0])
-		let u2 = flexbot.bot.users.get(args.match(/[0-9]{17,21}/g)[1])
-
+flexbot.addCommand("ship","Ship two users.",async function(msg,args){
+	let a = args.split(" ");
+	let u1 = {};
+	let u2 = {};
+	if(!a[1]){
+		let u = await flexbot.lookupUser(msg,a[0])
+		
+		if(u.id == msg.author.id){
+			msg.channel.createMessage(emoji.get(":heart:")+" **"+msg.author.username+"** ships themself with... themself... Sure are lonely, aren't ya... That's okay, you have me. *hugs*")
+		}else{
+			msg.channel.createMessage(emoji.get(":heart:")+" **"+msg.author.username+"** ships themself with **"+u.username+"** ("+(Math.floor(Math.random()*100)+1)+"% compatibility)")
+		}
+	}else if(a[1]){
+		u1 = await flexbot.lookupUser(msg,a[0])
+		u2 = await flexbot.lookupUser(msg,a[1])
 		msg.channel.createMessage(emoji.get(":heart:")+" **"+msg.author.username+"** ships **"+u1.username+"** with **"+u2.username+"** ("+(Math.floor(Math.random()*100)+1)+"% compatibility)")
 	}else{
-		msg.channel.createMessage("User not found.")
+		msg.channel.createMessage("Not enough arguments.")
 	}
 },[],"[user1],<user2>")
 
@@ -159,4 +162,108 @@ flexbot.addCommand("currency","Convert one form of currency to another",function
 			msg.channel.createMessage("An error occured, try again later.\n\n```\n"+e+"```")
 		}
 	});
-})
+});
+
+flexbot.addCommand("meirl","Pull a random post from r/me_irl",function(msg,args){
+	let request = require("request");
+	request.get("http://www.reddit.com/r/me_irl/new.json?sort=default&count=50",function(e,r,b){
+		if(!e && r.statusCode == 200){
+			let data = JSON.parse(b).data.children;
+			let post = data[Math.floor(Math.random()*data.length)].data;
+			post.url = post.url.replace(/http(s)?:\/\/(m\.)?imgur\.com/g,"https://i.imgur.com");
+			post.url = post.url.replace(new RegExp('&amp;','g'),"&");
+			post.url = post.url.replace("/gallery","");
+			post.url = post.url.replace("?r","");
+			
+			if(post.url.indexOf("imgur") > -1 && post.url.substring(post.url.length-4,post.url.length-3) != "."){
+				post.url+=".png";
+			}
+			
+			msg.channel.createMessage({embed:{
+				title:post.title,
+				url:"https://reddit.com"+post.permalink,
+				author:{
+					name:"u/"+post.author
+				},
+				description:"[Image/Video]("+post.url+")",
+				image:{
+					url:encodeURI(post.url)
+				},
+				footer:{
+					text:"Powered by r/me_irl"
+				}
+			}});
+		}else{
+			msg.channel.createMessage("An error occured, try again later.\n\n```\n"+e+"```")
+		}
+	});
+});
+
+flexbot.addCommand("shitpost","You might loose braincells.",function(msg,args){
+	let request = require("request");
+	request.get("http://www.reddit.com/r/memes/new.json?sort=default&count=50",function(e,r,b){
+		if(!e && r.statusCode == 200){
+			let data = JSON.parse(b).data.children;
+			let post = data[Math.floor(Math.random()*data.length)].data;
+			post.url = post.url.replace(/http(s)?:\/\/(m\.)?imgur\.com/g,"https://i.imgur.com");
+			post.url = post.url.replace(new RegExp('&amp;','g'),"&");
+			post.url = post.url.replace("/gallery","");
+			post.url = post.url.replace("?r","");
+			
+			if(post.url.indexOf("imgur") > -1 && post.url.substring(post.url.length-4,post.url.length-3) != "."){
+				post.url+=".png";
+			}
+			
+			msg.channel.createMessage({embed:{
+				title:post.title,
+				url:"https://reddit.com"+post.permalink,
+				author:{
+					name:"u/"+post.author
+				},
+				description:"[Image/Video]("+post.url+")",
+				image:{
+					url:encodeURI(post.url)
+				},
+				footer:{
+					text:"Powered by r/memes"
+				}
+			}});
+		}else{
+			msg.channel.createMessage("An error occured, try again later.\n\n```\n"+e+"```")
+		}
+	});
+});
+
+flexbot.addCommand("copypasta","Stuff to copypaste",function(msg,args){
+	let request = require("request");
+	request.get("http://www.reddit.com/r/copypasta/new.json?sort=default&count=50",function(e,r,b){
+		if(!e && r.statusCode == 200){
+			let data = JSON.parse(b).data.children;
+			let post = data[Math.floor(Math.random()*data.length)].data;
+			
+			msg.channel.createMessage(post.selftext.substring(0,1996-18-post.permalink.length)+(post.selftext.length > (1996-18-post.permalink.length) ? "...\nhttps://reddit.com"+post.permalink : ""));
+		}else{
+			msg.channel.createMessage("An error occured, try again later.\n\n```\n"+e+"```")
+		}
+	});
+});
+
+let blacklist = ["-comic","-cleavage","-bikini","-naked","-naked_towel","-underwear","-briefs","-blood","-fat","-animatronic"]
+
+flexbot.addCommand("foxgirl","Gets a random image of a foxgirl",function(msg,args){
+	request.get("https://ibsear.ch/api/v1/images.json?q=foxgirl%20"+blacklist.join("%20")+"&limit=75&shuffle=20",function(err,res,body){
+		if(!err && res.statusCode == 200){
+			let data = JSON.parse(body);
+			let img = data[Math.floor(Math.random()*data.length)]
+			
+			msg.channel.createMessage({content:"awuuuu~",embed:{
+				description:"```"+img.tags+"```",
+				image:{
+					url:"https://im1.ibsear.ch/"+img.path
+				}
+			}})
+		}else{
+			msg.channel.createMessage("An error occured, try again later.")
+		}
+	});
+},["awuuuu"]);
