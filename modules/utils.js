@@ -65,26 +65,45 @@ flexbot.addCommand("mods","Moderator list",function(msg,args){
 })
 
 flexbot.addCommand("purge","Purge/clean x messages from a channel",function(msg,args){
-	if(msg.channel.permissionsOf(msg.author.id).has("administrator")||flexbot.isOwner(msg)){
-	if(msg.channel.permissionsOf(flexbot.bot.user.id).has("administrator")){
+	if(msg.channel.permissionsOf(msg.author.id).has("manageMessages")){
+		if(msg.channel.permissionsOf(flexbot.bot.user.id).has("manageMessages")){
 			if(args && parseInt(args) > 0){
-				flexbot.bot.purgeChannel(msg.channel.id,parseInt(args))
-				msg.channel.createMessage("Successfully cleared "+args+" messages.")
+				flexbot.bot.getMessages(msg.channel.id,parseInt(args))
+				.then((msgs)=>{
+					var ids = [];
+					for (i = 0; i < msgs.length; i++) {
+						ids.push(msgs[i].id);
+					}
+					flexbot.bot.deleteMessages(msg.channel.id, ids);
+				})
+
+				msg.channel.createMessage("Cleaned "+args+" messages.")
 				.then((m)=>{
 					setTimeout(()=>{
-						flexbot.bot.deleteMessage(m.id)
-					},2500)
+						flexbot.bot.deleteMessage(msg.channel.id,m.id)
+					},5000)
 				})
 			}else{
-					msg.channel.createMessage("Amount not specified or lower than 1.")
+				msg.channel.createMessage("Amount not specified or lower than 1.")
 			}
 		}else{
-			msg.channel.createMessage("I do not have Administrator permission.")
+			msg.channel.createMessage("I do not have Manage Messages permission.")
 		}
 	}else{
-		msg.channel.createMessage(emoji.get(":no_entry_sign:")+" Lacking permissions, need Administrator.")
+		msg.channel.createMessage(emoji.get(":no_entry_sign:")+" Lacking permissions, need Manage Messages.")
 	}
 },["prune"])
+
+flexbot.addCommand("clean","Cleans bot messages",function(msg,args){
+	flexbot.bot.getMessages(msg.channel.id,100)
+	.then((msgs)=>{
+		for (i = 0; i < msgs.length; i++) {
+			if (msgs[i].author.id === bot.user.id) {
+				flexbot.bot.deleteMessage(msg.channel.id, msgs[i].id);
+			}
+		}
+	})
+})
 
 flexbot.addCommand("uptime","Contest of \"how long can we go without a restart\"",function(msg,args){
 	var uptime = flexbot.bot.uptime
@@ -333,14 +352,14 @@ flexbot.addCommand("binfo","Get info on a bot",function(msg,args){
 flexbot.addCommand("bots","Get bots of a user",function(msg,args){
 	flexbot.lookupUser(msg,args ? args : msg.author.mention)
 	.then(u=>{
-		request.get("https://bots.discord.pw/api/users/"+u.id,{headers:{"Authorization":flexbot.dbotsapi}},(err,res,body)=>{
+		request.get("https://bots.discord.pw/api/users/"+u.id,{headers:{"Authorization":flexbot.dbotsapi}},async (err,res,body)=>{
 			if(!err && res.statusCode == 200){
 				let data = JSON.parse(body);
 				let bots = [];
-				data.bots.forEach(b=>{
-					let a = flexbot.bot.users.get(b.user_id);
+				for(let b in data.bots){
+					let a = await bot.requestHandler.request("GET","/users/"+data.bots[b].user_id,true);
 					bots.push("**"+a.username+"#"+a.discriminator+"**")
-				})
+				}
 				msg.channel.createMessage("**"+u.username+"#"+u.discriminator+"** created "+bots.join(", "))
 			}else{
 				let data = JSON.parse(body);
@@ -457,4 +476,168 @@ flexbot.addCommand("shared","Gets how many servers shared of a user.",function(m
 			msg.channel.createMessage("**"+u.username+"#"+u.discriminator+"** shares **"+shared+" server(s)** with FlexBot.")
 		}
 	});
+});
+
+flexbot.addCommand("bprefix","Gets prefix of a bot",function(msg,args){
+	flexbot.lookupUser(msg,args ? args : msg.author.mention)
+	.then(u=>{
+		if(!u.bot){ msg.channel.createMessage("User is not a bot!"); return }
+		request.get("https://bots.discord.pw/api/bots/"+u.id,{headers:{"Authorization":flexbot.dbotsapi}},(err,res,body)=>{
+			if(!err && res.statusCode == 200){
+				let data = JSON.parse(body);
+				msg.channel.createMessage("**"+u.username+"#"+u.discriminator+"** uses `"+data.prefix+"` as a prefix.")
+			}else{
+				let data = JSON.parse(body);
+				if(data.error == "Bot user ID not found"){
+					msg.channel.createMessage("Bot not found on Discord Bots list.")
+				}else{
+					msg.channel.createMessage("An error occured with bot list. Blame abal.\n```"+body+"```")
+				}
+			}
+		});
+	});
+});
+
+flexbot.addCommand("bdesc","Gets description of a bot",function(msg,args){
+	flexbot.lookupUser(msg,args ? args : msg.author.mention)
+	.then(u=>{
+		if(!u.bot){ msg.channel.createMessage("User is not a bot!"); return }
+		request.get("https://bots.discord.pw/api/bots/"+u.id,{headers:{"Authorization":flexbot.dbotsapi}},(err,res,body)=>{
+			if(!err && res.statusCode == 200){
+				let data = JSON.parse(body);
+				msg.channel.createMessage("**"+u.username+"#"+u.discriminator+"**'s description is: `"+data.description+"`")
+			}else{
+				let data = JSON.parse(body);
+				if(data.error == "Bot user ID not found"){
+					msg.channel.createMessage("Bot not found on Discord Bots list.")
+				}else{
+					msg.channel.createMessage("An error occured with bot list. Blame abal.\n```"+body+"```")
+				}
+			}
+		});
+	});
+});
+
+flexbot.addCommand("bsite","Gets site of a bot",function(msg,args){
+	flexbot.lookupUser(msg,args ? args : msg.author.mention)
+	.then(u=>{
+		if(!u.bot){ msg.channel.createMessage("User is not a bot!"); return }
+		request.get("https://bots.discord.pw/api/bots/"+u.id,{headers:{"Authorization":flexbot.dbotsapi}},(err,res,body)=>{
+			if(!err && res.statusCode == 200){
+				let data = JSON.parse(body);
+				msg.channel.createMessage("**"+u.username+"#"+u.discriminator+"**'s site is: <"+data.website+">")
+			}else{
+				let data = JSON.parse(body);
+				if(data.error == "Bot user ID not found"){
+					msg.channel.createMessage("Bot not found on Discord Bots list.")
+				}else{
+					msg.channel.createMessage("An error occured with bot list. Blame abal.\n```"+body+"```")
+				}
+			}
+		});
+	});
+});
+
+flexbot.addCommand("binvite","Gets invite of a bot",function(msg,args){
+	flexbot.lookupUser(msg,args ? args : msg.author.mention)
+	.then(u=>{
+		if(!u.bot){ msg.channel.createMessage("User is not a bot!"); return }
+		request.get("https://bots.discord.pw/api/bots/"+u.id,{headers:{"Authorization":flexbot.dbotsapi}},(err,res,body)=>{
+			if(!err && res.statusCode == 200){
+				let data = JSON.parse(body);
+				msg.channel.createMessage("**"+u.username+"#"+u.discriminator+"**'s invite is: "+data.invite_url.replace("&permissions=0",""))
+			}else{
+				let data = JSON.parse(body);
+				if(data.error == "Bot user ID not found"){
+					msg.channel.createMessage("Bot not found on Discord Bots list.")
+				}else{
+					msg.channel.createMessage("An error occured with bot list. Blame abal.\n```"+body+"```")
+				}
+			}
+		});
+	});
+});
+
+flexbot.addCommand("whoowns","Gets owners of a bot",function(msg,args){
+	flexbot.lookupUser(msg,args ? args : msg.author.mention)
+	.then(u=>{
+		if(!u.bot){ msg.channel.createMessage("User is not a bot!"); return }
+		request.get("https://bots.discord.pw/api/bots/"+u.id,{headers:{"Authorization":flexbot.dbotsapi}},async (err,res,body)=>{
+			if(!err && res.statusCode == 200){
+				let data = JSON.parse(body);
+
+				let owners = [];
+				for(let i = 0;i < data.owner_ids.length;i++){
+					let a = await bot.requestHandler.request("GET","/users/"+data.owner_ids[i],true);
+					owners.push(a.username+"#"+a.discriminator)
+				}
+
+				msg.channel.createMessage("**"+u.username+"#"+u.discriminator+"** is owned by:\n```\n"+owners.join("\n")+"```")
+			}else{
+				let data = JSON.parse(body);
+				if(data.error == "Bot user ID not found"){
+					msg.channel.createMessage("Bot not found on Discord Bots list.")
+				}else{
+					msg.channel.createMessage("An error occured with bot list. Blame abal.\n```"+body+"```")
+				}
+			}
+		});
+	});
+});
+
+let langs = {
+	"eris"           : "Javascript",
+	"discord.js"     : "Javascript",
+	"discord.io"     : "Javascript",
+	"discordie"      : "Javascript",
+	"discordgo"      : "Golang",
+	"nyx"            : "Dart",
+	"discord-rs"     : "Rust",
+	"discord.net"    : "C#",
+	"discord.py"     : "Python",
+	"discord4j"      : "Java",
+	"discordcr"      : "Crystal",
+	"discordia"      : "Lua",
+	"litcord"        : "Lua",
+	"discordphp"     : "PHP",
+	"discordrb"      : "Ruby",
+	"discordsharp"   : "C#",
+	"discordunity"   : "Unity",
+	"dscord"         : "D Lang",
+	"javacord"       : "Java",
+	"jda"            : "Java",
+	"custom library" : "¯\\_(ツ)_/¯"
+}
+
+flexbot.addCommand("whatlib","Gets the used library of a bot",function(msg,args){
+	flexbot.lookupUser(msg,args ? args : msg.author.mention)
+	.then(u=>{
+		if(!u.bot){ msg.channel.createMessage("User is not a bot!"); return }
+		request.get("https://bots.discord.pw/api/bots/"+u.id,{headers:{"Authorization":flexbot.dbotsapi}},(err,res,body)=>{
+			if(!err && res.statusCode == 200){
+				let data = JSON.parse(body);
+				msg.channel.createMessage("**"+u.username+"#"+u.discriminator+"** uses the library **"+data.library.replace("Discord Dart","Nyx")+"** (Language: "+langs[data.library.replace("Discord Dart","Nyx").toLowerCase()]+")")
+			}else{
+				let data = JSON.parse(body);
+				if(data.error == "Bot user ID not found"){
+					msg.channel.createMessage("Bot not found on Discord Bots list.")
+				}else{
+					msg.channel.createMessage("An error occured with bot list. Blame abal.\n```"+body+"```")
+				}
+			}
+		});
+	});
+});
+
+flexbot.addCommand("raffle","Choose a random user",function(msg,args){
+	if(!msg.guild){ msg.channel.createMessage("Command cannot be used in PM's"); return}
+	let pool = [];
+	
+	msg.guild.members.forEach(u=>{
+		pool.push(u);
+	});
+	
+	let u = pool[Math.floor(Math.random()*pool.length)];
+	
+	msg.channel.createMessage("I choose **"+u.username+"#"+u.discriminator+"**"+(u.nick ? " ("+u.nick+")" : ""))
 });

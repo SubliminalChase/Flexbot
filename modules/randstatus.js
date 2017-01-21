@@ -1,7 +1,7 @@
 var flexbot = global.flexbot
 var emoji = require("node-emoji")
 
-function randStatus(){
+let randStatus = function(){
 	let cmds = 0;
 	for(c in flexbot.cmds){cmds++};
 	var slist = [

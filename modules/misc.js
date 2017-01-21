@@ -6,9 +6,14 @@ flexbot.addCommand("echo","Echo, echo, echo",function(msg,args){
 	msg.channel.createMessage("\u200b"+args)
 },["say"],"[string]")
 
-flexbot.addCommand("status","Sets bots status",function(msg,args){
-	flexbot.bot.editStatus("online",{name:args})
-	msg.channel.createMessage("Set status.")
+flexbot.addCommand("status","[Whitelist] Sets bots status",function(msg,args){
+	if(flexbot.isOwner(msg)){
+		flexbot.bot.editStatus("online",{name:args})
+		msg.channel.createMessage("Will do! `f!load randstatus` to reset.")
+		if(flexbot.stimer) clearInterval(flexbot.stimer);
+	}else{
+			msg.channel.createMessage("Nah, you can't control me.")
+	}
 },[],"[string]")
 
 flexbot.addCommand("avatar","Get an avatar of someone",function(msg,args){
@@ -199,41 +204,6 @@ flexbot.addCommand("meirl","Pull a random post from r/me_irl",function(msg,args)
 	});
 });
 
-flexbot.addCommand("shitpost","You might loose braincells.",function(msg,args){
-	let request = require("request");
-	request.get("http://www.reddit.com/r/memes/new.json?sort=default&count=50",function(e,r,b){
-		if(!e && r.statusCode == 200){
-			let data = JSON.parse(b).data.children;
-			let post = data[Math.floor(Math.random()*data.length)].data;
-			post.url = post.url.replace(/http(s)?:\/\/(m\.)?imgur\.com/g,"https://i.imgur.com");
-			post.url = post.url.replace(new RegExp('&amp;','g'),"&");
-			post.url = post.url.replace("/gallery","");
-			post.url = post.url.replace("?r","");
-			
-			if(post.url.indexOf("imgur") > -1 && post.url.substring(post.url.length-4,post.url.length-3) != "."){
-				post.url+=".png";
-			}
-			
-			msg.channel.createMessage({embed:{
-				title:post.title,
-				url:"https://reddit.com"+post.permalink,
-				author:{
-					name:"u/"+post.author
-				},
-				description:"[Image/Video]("+post.url+")",
-				image:{
-					url:encodeURI(post.url)
-				},
-				footer:{
-					text:"Powered by r/memes"
-				}
-			}});
-		}else{
-			msg.channel.createMessage("An error occured, try again later.\n\n```\n"+e+"```")
-		}
-	});
-});
-
 flexbot.addCommand("copypasta","Stuff to copypaste",function(msg,args){
 	let request = require("request");
 	request.get("http://www.reddit.com/r/copypasta/new.json?sort=default&count=50",function(e,r,b){
@@ -267,3 +237,27 @@ flexbot.addCommand("foxgirl","Gets a random image of a foxgirl",function(msg,arg
 		}
 	});
 },["awuuuu"]);
+
+flexbot.addCommand("nadeko","e",function(msg,args){
+	msg.channel.createMessage(msg.author.mention+" did it. "+emoji.get("persevere")+emoji.get("gun"));
+});
+
+flexbot.addCommand("setnick","[Whitelist] Set's bot nick.",function(msg,args){
+	if(flexbot.isOwner(msg)){
+		if(!msg.guild){ msg.channel.createMessage("Cannot be used in PM's"); return}
+		flexbot.bot.editNickname(msg.guild.id,args ? args : "");
+		if(!args){
+			msg.channel.createMessage(emoji.get("pencil2")+"  Reset nickname");
+		}else{
+			msg.channel.createMessage(emoji.get("pencil2")+"  Changed nickname to `"+args+"`");
+		}
+	}else{
+		msg.channel.createMessage(emoji.get("no_entry_sign")+" No permission, edit it manually if you can.");
+	}
+});
+
+flexbot.addCommand("respects","Press F to pay respects",function(msg,args){
+	msg.channel.createMessage({embed:{
+		description:"<:Respects:269889128768864257> **"+msg.author.username+"** has paid respects"+(args ? " for **"+args+"**" : "")+". <:Respects:269889128768864257>"
+	}})
+});

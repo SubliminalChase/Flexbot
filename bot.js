@@ -1,5 +1,6 @@
 var Eris = require("eris");
 var config = require("./config.json");
+var whitelist = require("./whitelist.json");
 global.flexbot = {};
 const flexbot = global.flexbot
 flexbot.bot = new Eris(config.token);
@@ -15,6 +16,7 @@ var fs = require("fs");
 var path = require("path");
 var emoji = require("node-emoji");
 var reload = require("require-reload")(require);
+var markov = require("libmarkov");
 
 var bot = flexbot.bot
 bot.on("ready", () => {
@@ -31,7 +33,7 @@ bot.on("ready", () => {
 });
 
 function isOwner(msg){
-	return msg.author.id == config.ownerid
+	return msg.author.id == config.ownerid || whitelist[msg.author.id] == true
 }
 
 flexbot.isOwner = isOwner;
@@ -77,14 +79,14 @@ function logError(cmd,msg,args,error){
 			{name:"User ID",value:""+msg.author.id,inline:true},
 			{name:msg.guild ? msg.guild.name : "Private Message",value:msg.guild ? ""+msg.guild.id : ""+msg.author.id,inline:true},
 			{name:msg.channel.name ? "#"+msg.channel.name : msg.author.username,value:""+msg.channel.id,inline:true},
-			{name:"Error",value:"```\n"+e+"```",inline:true}
+			{name:"Error",value:"```\n"+error+"```",inline:true}
 		],
 		footer:{
 			text:"Time",
-			icon_url:"https://raw.githubusercontent.com/twitter/twemoji/gh-pages/36x36/1f552.png"
+			icon_url:"https://flexbox.xyz/discord/twemoji/36x36/1f552.png"
 		},
 		thumbnail:{
-			url:msg.guild ? "https://cdn.discordapp.com/icons/"+msg.guild.id+"/"+msg.guild.icon+".jpg" : "https://cdnjs.cloudflare.com/ajax/libs/twemoji/2.2.3/2/72x72/1f5e8.png"
+			url:msg.guild ? "https://cdn.discordapp.com/icons/"+msg.guild.id+"/"+msg.guild.icon+".jpg" : "https://flexbox.xyz/discord/twemoji/72x72/1f5e8.png"
 		},
 		timestamp:new Date()
 	}})
@@ -105,13 +107,16 @@ var cmds = {
 			for(item in sorted){
 				var c = cmds[item]
 				co++
-				res.push("> "+c.name+" - "+c.desc)
+				res.push("\t\u2022 "+c.name+" - "+c.desc)
 			}
 
 			if(msg.guild) msg.channel.createMessage(emoji.get("envelope_with_arrow")+" Sending help via DM.");
 			bot.getDMChannel(msg.author.id)
 			.then((c)=>{
-			bot.createMessage(c.id,"```md\n# FlexBot Commands\n"+res.join("\n")+"\n\n# Total commands: "+co+"\n```")
+				bot.createMessage(c.id,"__**FlexBot Commands**__\n"+((res.join("\n")).length > 1998-24 ? (res.join("\n")).substring(0,1998-24) : (res.join("\n"))));
+				if(res.join("\n").length > 1998-24){
+					bot.createMessage(c.id,res.join("\n").substring(1998-24,res.join("\n").length));
+				}
 			});
 		},
 		aliases:[]
@@ -135,7 +140,11 @@ var cmds = {
 			if(isOwner(msg)){
 				bot.createMessage(msg.channel.id,emoji.get(":arrows_counterclockwise:")+" Restarting FlexBot.")
 				bot.createMessage(logid,emoji.get(":arrows_counterclockwise:")+" Restarting FlexBot.")
-				setTimeout(process.exit,1000)
+
+				if(flexbot.userdata){
+					fs.writeFileSync("./data/udata.json",JSON.stringify(flexbot.userdata));
+				}
+				setTimeout(process.exit,1500)
 			}else{
 				bot.createMessage(msg.channel.id,emoji.get(":no_entry_sign:")+" No permission.")
 			}
@@ -210,6 +219,48 @@ var cmds = {
 			}
 		},
 		aliases:[]
+	},
+	whitelist:{
+		name:"whitelist",
+		desc:"[Bot Owner] Manage whitelist.",
+		args:"[add/del] [user]",
+		func: function(msg,args){
+			if(msg.author.id == config.ownerid){
+				let a = args.split(" ");
+				if(a[0] == "add"){
+					if(!a[1]){
+						msg.channel.createMessage("Specify a user!");
+						return
+					}
+					if(!/[0-9]{17,21}/.test(a[1])){
+						msg.channel.createMessage("Must use mention!");
+						return
+					}
+
+					whitelist[a[1].match(/[0-9]{17,21}/)[0]] = true;
+					fs.writeFileSync("./whitelist.json",JSON.stringify(whitelist));
+					msg.channel.createMessage("Added!");
+				}else if(a[0] == "del"){
+					if(!a[1]){
+						msg.channel.createMessage("Specify a user!");
+						return
+					}
+					if(!/[0-9]{17,21}/.test(a[1])){
+						msg.channel.createMessage("Must use mention!");
+						return
+					}
+
+					delete whitelist[a[1].match(/[0-9]{17,21}/)[0]]
+					fs.writeFileSync("./whitelist.json",JSON.stringify(whitelist));
+					msg.channel.createMessage("Removed!");
+				}else{
+					msg.channel.createMessage("Usage: `add/del user`");
+				}
+			}else{
+				bot.createMessage(msg.channel.id,emoji.get(":no_entry_sign:")+" No permission.")
+			}
+		},
+		aliases:[]
 	}
 };
 flexbot.cmds = cmds;
@@ -250,15 +301,15 @@ flexbot.awaitForMessage = function(msg,display,callback,timeout) {
 			func = function(msg2){
 				if (msg2.author.id == msg.author.id){
 				let response;
-				if(callback){
-					response = callback(msg2);
-				}else
-					response = true;
-				if(response){
-					bot.removeListener("messageCreate",func);
-					clearTimeout(flexbot.awaitMsgs[msg.channel.id][msg.author.id].timer);
-					resolve(msg2);
-				}
+					if(callback){
+						response = callback(msg2);
+					}else
+						response = true;
+					if(response){
+						bot.removeListener("messageCreate",func);
+						clearTimeout(flexbot.awaitMsgs[msg.channel.id][msg.author.id].timer);
+						resolve(msg2);
+					}
 				}
 			}
 			bot.on("messageCreate",func);
@@ -340,6 +391,21 @@ for(f of files){
 	console.log("Loaded Module: "+f)
 };
 
+let responses = {
+	"how are you":[
+		"I'm good.",
+		"Things could be better.",
+	],
+	"hi":[
+		"Hello.",
+		"Hai! ^.^",
+		"Heya",
+		"Hi",
+	]
+}
+
+let nemimode = false;
+
 var prefix = flexbot.prefix;
 var prefix2 = flexbot.prefix2;
 bot.on("messageCreate",(msg) => {
@@ -349,7 +415,7 @@ bot.on("messageCreate",(msg) => {
 		var args = c.splice((msg.content.substring(0,prefix3.length) == prefix3 ? 2 : 1),c.length).join(" ")
 		var cmd = c[0]
 		if(msg.content.substring(0,prefix3.length) == prefix3) cmd=c.splice(0,2).join(" ");
-		
+
 		let hasRan = false;
 
 		for(item in cmds){
@@ -387,6 +453,45 @@ bot.on("messageCreate",(msg) => {
 			setTimeout(process.exit,1000)
 		}
 	}
+
+	if(msg.author.id != bot.user.id){
+		let c = msg.content.split(" ");
+		let args = c.splice(1,c.length).join(" ");
+		let prefix = c[0];
+		let u = msg.guild ? msg.guild.members.get(bot.user.id) : bot.user
+		if(prefix.toLowerCase() == "ren,"){
+			if(args.length == 0) return;
+			if(args.toLowerCase() == "hi" || args.toLowerCase() == "hey" || args.toLowerCase() == "hello"){
+				let r = Math.floor(Math.random()*responses["hi"].length);
+				msg.channel.createMessage(responses["hi"][r]);
+			}else if(args.toLowerCase() == "how are you"){
+				let r = Math.floor(Math.random()*responses["how are you"].length);
+				msg.channel.createMessage(responses["how are you"][r]);
+			}else if(args.toLowerCase() == "talk to nemi"){
+				msg.channel.createMessage("Okay now talking to Nemi in <#268539905704067072>");
+				bot.createMessage("268539905704067072","Hi Nemi, hows my favorite girl?");
+				nemimode = true;
+			}else if(args.toLowerCase() == "stop talking to nemi"){
+				msg.channel.createMessage("Okay no longer talking to Nemi.");
+				nemimode = false;
+			}else if(args.toLowerCase() == "markov stats"){
+				msg.channel.createMessage("todo");
+			}else{
+				fs.appendFileSync(__dirname+"/markov.txt",args+"\n")
+				let gen = new markov(fs.readFileSync(__dirname+"/markov.txt","utf-8"));
+
+				msg.channel.createMessage(gen.generate(1));
+			}
+		}
+
+		if(msg.channel.id == "268539905704067072" && nemimode == true && msg.author.id == "196116237623885824"){
+			setTimeout(()=>{
+				let gen = new markov(fs.readFileSync(__dirname+"/markov.txt","utf-8"));
+
+				msg.channel.createMessage(gen.generate(1));
+			},6000)
+		}
+	}
 });
 
 bot.on("guildCreate",async function(s){
@@ -409,7 +514,10 @@ bot.on("guildCreate",async function(s){
 					text:"Time",
 					icon_url:"http://www.famfamfam.com/lab/icons/silk/icons/time.png"
 				},
-				timestamp:new Date()
+				timestamp:new Date(),
+				thumbnail:{
+					url:"https://cdn.discordapp.com/icons/"+s.id+"/"+s.icon+".jpg"
+				}
 			}})
 
 	request.post("https://bots.discord.pw/api/bots/"+bot.user.id+"/stats",{headers:{"Authorization":config.dbotsapi},json:{server_count:bot.guilds.size}});
@@ -428,7 +536,10 @@ bot.on("guildDelete",s=>{
 			icon_url:"http://www.famfamfam.com/lab/icons/silk/icons/time.png"
 		},
 		timestamp:new Date(),
-		color:0xF04946
+		color:0xF04946,
+		thumbnail:{
+			url:"https://cdn.discordapp.com/icons/"+s.id+"/"+s.icon+".jpg"
+		}
 	}})
 
 	request.post("https://bots.discord.pw/api/bots/"+bot.user.id+"/stats",{headers:{"Authorization":config.dbotsapi},json:{server_count:bot.guilds.size}});
