@@ -13,6 +13,8 @@
     "cleverbot-node": "^0.2.4",
     "eris": "github:abalabahaha/eris#dev",
     "jimp": "^0.2.27",
+    "libmarkov": "^1.1.3",
+    "markov": "0.0.7",
     "mathjs": "^3.6.0",
     "node-emoji": "^1.4.1",
     "request": "^2.76.0",
